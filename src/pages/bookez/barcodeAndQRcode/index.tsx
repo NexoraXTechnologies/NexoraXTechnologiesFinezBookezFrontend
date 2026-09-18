@@ -15,21 +15,21 @@ const BarCodeAndQrCode = () => {
                 description: "Create and manage Barcode/QR Code label templates, formats and print settings.",
                 icon: <LayoutTemplate size={22} />,
                 component: AssignBarcodeQrTemplate,
-                permissionKey: "accountMaster"
+                permissionKey: "barCodeQrCodeTemplate"
             },
             {
                 title: "Assign Barcode / QR Code",
                 description: "Generate and assign Barcode/QR Codes to products using configured templates.",
                 icon: <ScanBarcode size={22} />,
                 component: AssignBarcodeQrCode,
-                permissionKey: "accountMaster"
+                permissionKey: "assignBarCodeQrCode"
             },
             {
                 title: "Print Barcode / QR Code",
                 description: "Preview and print assigned Barcode/QR Code labels for products.",
                 icon: <Printer size={22} />,
                 component: BarcodeQrLabelPrint,
-                permissionKey: "accountMaster"
+                permissionKey: "printBarCodeQrCode"
             }
         ];
         return [...defaultCards];

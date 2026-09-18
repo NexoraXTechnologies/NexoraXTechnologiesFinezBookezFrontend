@@ -48,6 +48,7 @@ import {
     saveCustomTransactionData,
     updateCustomTransactionData,
 } from "../../../../redux/slices/professionalSlice/customTransaction/customTransactionSlice";
+import Permission from "../../../../components/PermissionGuard";
 
 /* ===================================================
    TYPES
@@ -1343,12 +1344,6 @@ const CustomTransaction = ({
     const openEditModal = (
         record: any
     ) => {
-        /*
-         * The complete selected record from the listing
-         * is passed directly into this function.
-         *
-         * No get-single API is called.
-         */
         const transactionData =
             record?.data ||
             record?.transactionData ||
@@ -1469,9 +1464,6 @@ const CustomTransaction = ({
                                 {}
                             );
 
-                        /*
-                         * Support direct API field names.
-                         */
                         if (
                             normalizedRow.grossAmount ===
                             undefined ||
@@ -1711,7 +1703,9 @@ const CustomTransaction = ({
                     ).toLowerCase();
 
                 if (
-                    (lowerKey === "cgst" || lowerKey === "cgstpercentage" || lowerKey === "sgst" || lowerKey === "sgstpercentage") && num(value) > 0) {
+                    (lowerKey === "cgst" || lowerKey === "cgstpercentage" || lowerKey === "sgst" || lowerKey === "sgstpercentage") &&
+                    num(value) > 0
+                ) {
                     updatedRow.igst = "";
                     updatedRow.igstPercentage = "";
                     updatedRow.igstAmount = 0;
@@ -2003,14 +1997,16 @@ const CustomTransaction = ({
         const bodyFields = templateFields?.body || [];
         const bodyKeys = bodyFields.map((field: any) => field?.key);
 
-        return (form?.body || []).filter((row: any) => bodyKeys.some((key: string) =>
-            hasValue(
-                row?.[
-                key
-                ]
+        return (form?.body || [])
+            .filter((row: any) =>
+                bodyKeys.some((key: string) =>
+                    hasValue(
+                        row?.[
+                        key
+                        ]
+                    )
+                )
             )
-        )
-        )
             .map(
                 (row: any) =>
                     pickSchemaFields(
@@ -2051,7 +2047,9 @@ const CustomTransaction = ({
         if (!moduleCode || !validateForm()) {
             return;
         }
+
         const data = buildTransactionData();
+
         try {
             if (editingVoucherNumber) {
                 await dispatch(
@@ -2104,7 +2102,7 @@ const CustomTransaction = ({
                 "Custom transaction operation failed"
             );
         }
-        };
+    };
 
     /* ===================================================
        DELETE
@@ -2254,12 +2252,18 @@ const CustomTransaction = ({
                         }
                     />
 
-                    <DataCreateButton
-                        callBackFn={
-                            openAddModal
-                        }
-                        text={`Add ${resolvedModuleName}`}
-                    />
+                    {/* CUSTOM TRANSACTION CREATE PERMISSION */}
+                    <Permission
+                        transactionModuleCode={moduleCode}
+                        action="create"
+                    >
+                        <DataCreateButton
+                            callBackFn={
+                                openAddModal
+                            }
+                            text={`Add ${resolvedModuleName}`}
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -2279,49 +2283,57 @@ const CustomTransaction = ({
                     record: any
                 ) => (
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
 
-                            /*
-                             * Sends the selected list row
-                             * directly to the edit modal.
-                             */
-                            onClick={() =>
-                                openEditModal(
-                                    record
-                                )
-                            }
-                            className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                        {/* CUSTOM TRANSACTION UPDATE PERMISSION */}
+                        <Permission
+                            transactionModuleCode={moduleCode}
+                            action="update"
                         >
-                            <Edit
-                                size={
-                                    16
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    openEditModal(
+                                        record
+                                    )
                                 }
-                            />
-                        </button>
+                                className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
+                            >
+                                <Edit
+                                    size={
+                                        16
+                                    }
+                                />
+                            </button>
+                        </Permission>
 
-                        <button
-                            type="button"
-                            disabled={
-                                deleteLoading
-                            }
-                            onClick={(
-                                event
-                            ) =>
-                                handleDeleteClick(
-                                    event,
-
-                                    record
-                                )
-                            }
-                            className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                        {/* CUSTOM TRANSACTION DELETE PERMISSION */}
+                        <Permission
+                            transactionModuleCode={moduleCode}
+                            action="delete"
                         >
-                            <Trash2
-                                size={
-                                    16
+                            <button
+                                type="button"
+                                disabled={
+                                    deleteLoading
                                 }
-                            />
-                        </button>
+                                onClick={(
+                                    event
+                                ) =>
+                                    handleDeleteClick(
+                                        event,
+
+                                        record
+                                    )
+                                }
+                                className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                            >
+                                <Trash2
+                                    size={
+                                        16
+                                    }
+                                />
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />
@@ -2329,36 +2341,36 @@ const CustomTransaction = ({
             {pagination?.totalDocs >
                 0 && (
                     <Pagination
-                    localLimit={
-                        localLimit
-                    }
-                    selectCb={(
-                        event: any
-                    ) => {
-                        setLocalLimit(
-                            Number(
-                                event
-                                    .target
-                                    .value
-                            )
-                        );
+                        localLimit={
+                            localLimit
+                        }
+                        selectCb={(
+                            event: any
+                        ) => {
+                            setLocalLimit(
+                                Number(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            );
 
-                        setLocalOffset(
-                            0
-                        );
-                    }}
-                    preDisabled={
-                        !pagination?.hasPrevPage
-                    }
-                    nextDisabled={
-                        !pagination?.hasNextPage
-                    }
-                    setLocalOffset={
-                        setLocalOffset
-                    }
-                    pagination={
-                        pagination
-                    }
+                            setLocalOffset(
+                                0
+                            );
+                        }}
+                        preDisabled={
+                            !pagination?.hasPrevPage
+                        }
+                        nextDisabled={
+                            !pagination?.hasNextPage
+                        }
+                        setLocalOffset={
+                            setLocalOffset
+                        }
+                        pagination={
+                            pagination
+                        }
                     />
                 )}
 

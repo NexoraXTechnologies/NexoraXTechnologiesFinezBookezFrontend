@@ -86,9 +86,7 @@ const MasterDashboard = () => {
         : []),
     ];
 
-    const apiCards: any[] = customMasterModules
-      .filter((item: any) => item?.status === "active")
-      .map((item: any) => {
+    const apiCards: any[] = customMasterModules.filter((item: any) => item?.status === "active").map((item: any) => {
         const moduleName = item?.moduleName || "Custom Master";
         const moduleCode = item?.moduleCode || item?._id || "";
 
@@ -108,8 +106,7 @@ const MasterDashboard = () => {
           // CUSTOM MASTER REAL MODULE CODE
           moduleCode,
         };
-      });
-
+    });
     const reportCard: any[] = [
       {
         title: "Reports Mapping",

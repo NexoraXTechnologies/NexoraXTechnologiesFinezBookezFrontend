@@ -9,7 +9,7 @@ import Badge from "../../../../../components/badge";
 import SearchInput from "../../../../../components/searchInput";
 import Pagination from "../../../../../components/pagination";
 import ConfirmTooltip from "../../../../../components/common/ConfirmTooltip";
-// import Permission from "../../../../../components/PermissionGuard";
+import Permission from "../../../../../components/PermissionGuard";
 import Modal from "../../../../../components/modal";
 import DynamicAddForm from "../../../../../components/voucher/dynamicAddForm";
 import { SelectInput } from "../../../../../components/inputs";
@@ -946,12 +946,13 @@ const MultiSalesInvoice = () => {
                         callBackFn: handleRefresh,
                         loading: refreshing,
                     }} />
-
+                    <Permission module="bookez" permissionKey="multiSalesInvoice" action="create">
                     {/* @ts-ignore */}
                     <DataCreateButton {...{
                         callBackFn: openAddModal,
                         text: "Add Multi Sales Invoice",
-                    }} />
+                        }} />
+                    </Permission>
                 </div>
             </div>
 
@@ -962,6 +963,7 @@ const MultiSalesInvoice = () => {
                 emptyMessage={`No ${status} Multi Sales Invoice found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission module="bookez" permissionKey="multiSalesInvoice" action="update">
                         <button
                             id="multi-sales-invoice-edit-button"
                             disabled={detailLoading || updateLoading}
@@ -969,8 +971,9 @@ const MultiSalesInvoice = () => {
                             className="cursor-pointer rounded-md p-2 text-primary transition-all duration-200 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <Edit size={16} />
-                        </button>
-
+                            </button>
+                        </Permission>
+                        <Permission module="bookez" permissionKey="multiSalesInvoice" action="delete">
                             <button
                                 id="multi-sales-invoice-delete-button"
                                 disabled={deleteLoading}
@@ -978,7 +981,8 @@ const MultiSalesInvoice = () => {
                                 className="cursor-pointer rounded-md p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50"
                             >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

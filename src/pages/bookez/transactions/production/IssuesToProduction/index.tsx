@@ -18,6 +18,7 @@ import { getProductBalance, saveInventoryBalance, updateInventoryBalance } from 
 import professionalAxios from "../../../../../services/professionalAxios";
 import { formatDateForInput, formatDateForList, getFinancialYearRange, isTrueValue, loadAllTemplateOptions, money, num, todayYMD } from "../../../../../utils/helperFunctions";
 import { getAllSystemConfigurations } from "../../../../../redux/slices/systemConf";
+import Permission from "../../../../../components/PermissionGuard";
 
 const MODULE_CODE = "issueToProduction";
 const MODULE_NAME = "Issue to Production";
@@ -2236,11 +2237,16 @@ const IssueToProduction = () => {
                         callBackFn={handleRefresh}
                         loading={refreshing}
                     />
-
+                    <Permission
+                        module="bookez"
+                        permissionKey="productions.issuesToProduction"
+                        action="create"
+                    >
                     <DataCreateButton
                         callBackFn={openAddModal}
                         text="Add Issue to Production"
-                    />
+                        />
+                    </Permission>
                 </div>
             </div>
 
@@ -2251,6 +2257,11 @@ const IssueToProduction = () => {
                 emptyMessage={`No ${status} Issue to Production found`}
                 actions={(record: any) => (
                     <div className="flex items-center gap-2">
+                        <Permission
+                            module="bookez"
+                            permissionKey="productions.issuesToProduction"
+                            action="update"
+                        >
                         <button
                             onClick={() =>
                                 openEditModal(record)
@@ -2260,7 +2271,12 @@ const IssueToProduction = () => {
                         >
                             <Edit size={16} />
                         </button>
-
+                        </Permission>
+                        <Permission
+                            module="bookez"
+                            permissionKey="productions.issuesToProduction"
+                            action="delete"
+                        >
                         <button
                             disabled={deleteLoader}
                             onClick={(event) => {
@@ -2292,7 +2308,8 @@ const IssueToProduction = () => {
                             title="Delete"
                         >
                             <Trash2 size={16} />
-                        </button>
+                            </button>
+                        </Permission>
                     </div>
                 )}
             />

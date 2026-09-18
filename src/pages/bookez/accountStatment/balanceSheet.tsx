@@ -250,7 +250,7 @@ const BalanceSheet = () => {
           </div>
         </div>
       </div>
-
+ 
       <div className={`flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 shadow-sm ${Math.abs(difference) < 0.01 ? "border-success/20" : "border-danger/20"}`}>
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${Math.abs(difference) < 0.01 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>

@@ -258,10 +258,6 @@ const SalesOrder = () => {
         setProductSearchValue,
     ] = useState("");
 
-    // ★ ADDED: Account Master list loading guard
-    const [accountListLoaded, setAccountListLoaded] =
-        useState(false);
-
     const [editingRecord, setEditingRecord] =
         useState<any>(false);
 
@@ -435,6 +431,19 @@ const SalesOrder = () => {
     const isTrueValue = (value: any) =>
         value === true ||
         String(value ?? "").toLowerCase() === "true";
+
+    // ⭐ YELLOW STAR: ADDED — CHECK CUSTOMER AVAILABILITY FROM DYNAMIC SCHEMA OPTIONS
+    const schemaCustomerAvailability = useMemo(() => {
+        const customerFields = (templateFields?.header || []).filter((field: any) => {
+            const fieldKey = String(field?.key || "");
+            return !isTrueValue(field?.isHidden) && CUSTOMER_FIELD_KEYS.has(fieldKey);
+        });
+
+        return {
+            hasField: customerFields.length > 0,
+            hasAccounts: customerFields.some((field: any) => Array.isArray(field?.options) && field.options.length > 0),
+        };
+    }, [templateFields?.header]);
 
     const getHeaderFieldByKey = (key: string) =>
         templateFields?.header?.find(
@@ -2112,7 +2121,6 @@ const SalesOrder = () => {
     const handleAccountSaved = async (savedResponse: any) => {
         try {
             const accountResponse = await dispatch(getAllAccounts({ offset: 0, limit: 100, search: "", }) as any).unwrap();
-            setAccountListLoaded(true);
 
             // ★ REFRESH SALES ORDER REPORT MAPPING
             await dispatch(getAllReportMapping({ moduleType: "salesOrder", }) as any);
@@ -2146,18 +2154,12 @@ const SalesOrder = () => {
                 accountResponse?.data ||
                 [];
 
-            const customerAccounts =
+            // ⭐ YELLOW STAR: UPDATED — DO NOT FILTER CREATED ACCOUNT BY HARDCODED accountType
+            const accountList =
                 Array.isArray(
                     refreshedAccounts
                 )
-                    ? refreshedAccounts.filter(
-                        (account: any) =>
-                            String(
-                                account?.accountType ||
-                                ""
-                            ).toLowerCase() ===
-                            "customer"
-                    )
+                    ? refreshedAccounts
                     : [];
 
             const savedCode =
@@ -2169,7 +2171,7 @@ const SalesOrder = () => {
                 "";
 
             const createdCustomer =
-                customerAccounts.find(
+                accountList.find(
                     (account: any) =>
                         (
                             savedCode &&
@@ -2192,8 +2194,8 @@ const SalesOrder = () => {
                         ? savedAccount
                         : null
                 ) ||
-                customerAccounts[
-                customerAccounts.length -
+                accountList[
+                accountList.length -
                 1
                 ] ||
                 null;
@@ -5202,33 +5204,29 @@ const SalesOrder = () => {
                     "Failed to load Account Master records",
                     error
                 );
-            } finally {
-                setAccountListLoaded(
-                    true
-                );
             }
         };
 
         loadAccounts();
     }, [dispatch]);
 
-    // ★ ADDED: Open Account Master when Sales Order opens
-    // and no customer account exists.
+    // ⭐ YELLOW STAR: UPDATED — OPEN ACCOUNT MASTER USING SCHEMA OPTIONS, NOT HARDCODED ACCOUNT TYPE
     useEffect(() => {
         if (!showModal) return;
         if (editingRecord) return;
-        if (!accountListLoaded) return;
+        if (fieldsLoading) return;
 
         if (
-            filterAccount.length === 0
+            schemaCustomerAvailability.hasField &&
+            !schemaCustomerAvailability.hasAccounts
         ) {
             setCheckAccount(true);
         }
     }, [
         showModal,
         editingRecord,
-        accountListLoaded,
-        filterAccount.length,
+        fieldsLoading,
+        schemaCustomerAvailability,
     ]);
 
     const isClosedSalesOrder = (

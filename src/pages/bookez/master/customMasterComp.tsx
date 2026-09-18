@@ -12,6 +12,7 @@ import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import { toast } from "react-toastify";
 import { PrimaryButton } from "../../../components/buttons";
 import Pagination from "../../../components/pagination";
+import Permission from "../../../components/PermissionGuard";
 
 type CustomMasterCompProps = { name?: string; moduleCode?: string; };
 
@@ -781,24 +782,16 @@ const CustomMasterComp = ({
 		fetchAccounts();
 	}, [localOffset, localLimit, debouncedSearch]
 	);
+
 	return (
 		<div className="flex h-[100%] w-full flex-col border border-border bg-card p-4 text-card-foreground shadow-sm">
 			<div className="mb-3 flex items-center justify-end">
 				<div className="me-2">
-					<SearchInput
-						{...{
-							search, setSearch
-						}}
-					/>
+					<SearchInput {...{ search, setSearch }} />
 				</div>
-				<PrimaryButton
-					{...{
-						text: "Add", callBackFn: () => {
-							openEditModal();
-							setEdit(false);
-						}
-					}}
-				/>
+				<Permission moduleCode={moduleCode} action="create">
+					<PrimaryButton {...{ text: "Add", callBackFn: () => { openEditModal(); setEdit(false); } }} />
+				</Permission>
 			</div>
 			<DataTable
 				columns={columns}
@@ -807,6 +800,7 @@ const CustomMasterComp = ({
 				emptyMessage="No data found"
 				actions={(acc: any) => (
 					<div className="flex items-center gap-2">
+						<Permission moduleCode={moduleCode} action="update">
 						<button
 							id="account-edit-button"
 							onClick={() => {
@@ -816,7 +810,9 @@ const CustomMasterComp = ({
 							className="cursor-pointer rounded-lg p-2 text-primary transition-all duration-200 hover:bg-primary/10 hover:text-primary"
 						>
 							<Edit size={16} />
-						</button>
+							</button>
+						</Permission>
+						<Permission moduleCode={moduleCode} action="delete">
 						<button
 							id="account-delete-button"
 							onClick={(event: any) => {
@@ -831,7 +827,8 @@ const CustomMasterComp = ({
 							className="cursor-pointer rounded-lg p-2 text-danger transition-all duration-200 hover:bg-danger/10 hover:text-danger"
 						>
 							<Trash2 size={16} />
-						</button>
+							</button>
+						</Permission>
 					</div>
 				)}
 			/>

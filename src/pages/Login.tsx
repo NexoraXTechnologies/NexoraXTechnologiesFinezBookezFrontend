@@ -19,7 +19,7 @@ import {
 // import OneSignal from 'react-onesignal';
 import { motion } from "framer-motion";
 import { AuthButton } from "../components/buttons";
-import { getAllPermissions } from "../redux/slices/permissionSlice";
+import { clearPermissions, getAllPermissions } from "../redux/slices/permissionSlice";
 
 const OTP_LENGTH = 4;
 
@@ -211,6 +211,7 @@ const Login = () => {
       startIndex + pastedDigits.length,
       OTP_LENGTH - 1
     );
+
     focusOtpInput(nextFocusIndex);
   };
 
@@ -258,8 +259,7 @@ const Login = () => {
           })
         );
 
-        const fullName = `${user.userFirstName || ""} ${user.userLastName || ""
-          }`.trim();
+        const fullName = `${user.userFirstName || ""} ${user.userLastName || ""}`.trim();
 
         localStorage.setItem(
           "professionalUser",
@@ -276,16 +276,20 @@ const Login = () => {
         );
 
         try {
+          // ⭐ CLEAR OLD / PREVIOUS USER PERMISSIONS
+          dispatch(clearPermissions());
+
+          // ⭐ LOAD CURRENT LOGGED-IN USER PERMISSIONS BEFORE NAVIGATION
           if (user?.parentUserMobileNumber && user?.userMobileNumberHash) {
-            dispatch(
+            await dispatch(
               getAllPermissions({
                 offset: 0,
                 limit: 100,
                 parentMobile: user.parentUserMobileNumber,
                 childMobile: user.userMobileNumberHash,
-                storeInLocal:true
-              }) as any
-            );
+                storeInLocal: true,
+              })
+            ).unwrap();
           }
 
           if (user.userEmail) {
@@ -299,11 +303,18 @@ const Login = () => {
               "⚠️ No professional userEmail found for OneSignal login"
             );
           }
-        } catch (error) {
-          console.error("❌ OneSignal PRO login error:", error);
-        }
 
-        navigate("/");
+          // ⭐ NAVIGATE ONLY AFTER PERMISSIONS ARE LOADED
+          navigate("/");
+        } catch (error: any) {
+          console.error("❌ Permission load error:", error);
+
+          toast.error(
+            error?.message ||
+            error?.data?.message ||
+            "Unable to load user permissions"
+          );
+        }
       } else {
         navigate("/professionalRegister");
       }
@@ -526,15 +537,12 @@ const Login = () => {
               </p>
             </div>
 
-            {/* Username */}
             {showOtpPopup ? (
               <>
-                {/* Title */}
                 <h3 className="text-center text-lg font-semibold text-card-foreground">
                   Enter OTP
                 </h3>
 
-                {/* OTP Boxes */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -564,7 +572,6 @@ const Login = () => {
                   ))}
                 </motion.div>
 
-                {/* Resend */}
                 <p className="my-3 text-center text-sm text-muted-foreground">
                   Didn't receive OTP?{" "}
                   <span
@@ -575,7 +582,6 @@ const Login = () => {
                   </span>
                 </p>
 
-                {/* Next Button */}
                 <AuthButton
                   {...{
                     loader: isVerifying,
@@ -602,6 +608,7 @@ const Login = () => {
                         const numericValue = event.target.value
                           .replace(/\D/g, "")
                           .slice(0, 10);
+
                         setMobile(numericValue);
                       }}
                       onKeyDown={(event) => {
@@ -669,9 +676,7 @@ const Login = () => {
           transition={{ duration: 0.3 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
         >
-          {/* Modal Box */}
           <div className="relative max-h-[80vh] w-full max-w-[900px] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl">
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <h2 className="text-lg font-semibold text-card-foreground">
                 Terms & Conditions
@@ -685,7 +690,6 @@ const Login = () => {
               </button>
             </div>
 
-            {/* Scrollable Content */}
             <div className="max-h-[70vh] space-y-4 overflow-y-auto scroll-smooth px-5 py-4 text-card-foreground">
               {termsAndConditions.map(({ title, text }: any, index: any) => (
                 <Section key={index} title={title} text={text} />

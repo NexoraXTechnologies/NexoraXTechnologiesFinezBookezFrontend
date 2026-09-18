@@ -98,6 +98,6 @@ const OpeningBalancesDashboard = () => {
       cards={cards}
     />
   );
-};
+}; 
 
 export default OpeningBalancesDashboard;
