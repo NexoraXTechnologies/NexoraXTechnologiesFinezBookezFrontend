@@ -394,13 +394,20 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         try {
             setMapLoading(true);
             const response = await dispatch(getStateCityDashboard({ state: option.value }) as any).unwrap();
-            const cities = Array.isArray(response?.cities) ? response.cities : [];
+            // ⭐ UPDATED
+            const cities = Array.isArray(response) ? response : Array.isArray(response?.cities) ? response.cities : [];
             const normalized = cities
                 .map((item: any) => ({
                     city: getCityName(item?.city),
                     amount: Number(item?.totalAmount || 0),
                     transactions: Number(item?.totalCount || 0),
-                    businesses: Number(item?.totalBusinesses || 0)
+                    businesses: Number(item?.totalBusinesses || 0),
+                    // ⭐ UPDATED
+                    // ⭐ UPDATED
+                    salesAmount: Number(item?.salesInvoice?.totalAmount || 0),
+                    salesReturnAmount: Number(item?.salesInvoiceReturn?.totalAmount || 0),
+                    purchaseAmount: Number(item?.purchaseInvoice?.totalAmount || 0),
+                    purchaseReturnAmount: Number(item?.purchaseReturn?.totalAmount || 0)
                 }))
                 .filter((item: any) => item.city)
                 .sort((a: any, b: any) => b.amount - a.amount);
@@ -628,6 +635,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     ];
     const mapMaxAmount = Math.max(0, ...mapCityData.map((item: any) => Number(item?.amount || 0)));
     const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
+    // ⭐ UPDATED
+    const noDataMapColor = "#f97316";
     const normalizeDistrictKey = (value: any) => normalizeGeoName(value).replace(/\b(district|city district|urban|rural)\b/g, "").replace(/\s+/g, " ").trim();
     const findMapCityData = (districtName: any) => {
         const districtKey = normalizeDistrictKey(districtName);
@@ -647,6 +656,15 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             return districtKey.includes(cityKey) || cityKey.includes(districtKey);
         }) || null;
     };
+    // ⭐ UPDATED
+    const mapCitiesForColor = [...mapCityData].sort((a: any, b: any) => String(a?.city || "").localeCompare(String(b?.city || "")));
+    const dataCityColors = mapCitiesForColor.map((_: any, index: number) => `hsl(${(index * 47 + 210) % 360} 72% 48%)`);
+    const getCityDataColor = (cityName: any) => {
+        const cityData = findMapCityData(cityName);
+        const cityKey = normalizeDistrictKey(cityData?.city || cityName);
+        const colorIndex = mapCitiesForColor.findIndex((item: any) => normalizeDistrictKey(item?.city) === cityKey);
+        return colorIndex >= 0 ? dataCityColors[colorIndex] : "#2563eb";
+    };
     const getMapFillColor = (amount: any) => {
         const value = Number(amount || 0);
         if (value <= 0 || mapMaxAmount <= 0)
@@ -657,8 +675,10 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     };
     const getDistrictNameFromFeature = (feature: any) => feature?.properties?.district || feature?.properties?.DISTRICT || feature?.properties?.district_name || feature?.properties?.DISTRICT_NAME || feature?.properties?.dtname || feature?.properties?.DT_NAME || feature?.properties?.NAME_2 || feature?.properties?.name || feature?.properties?.NAME || "-";
     const getDistrictStyle = (feature: any) => {
-        const cityData = findMapCityData(getDistrictNameFromFeature(feature));
-        return { color: cityData ? "#64748b" : "#94a3b8", weight: cityData ? 1.5 : 1.15, fillColor: getMapFillColor(cityData?.amount), fillOpacity: cityData ? 0.98 : 0.88 };
+        const districtName = getDistrictNameFromFeature(feature);
+        const cityData = findMapCityData(districtName);
+        // ⭐ UPDATED
+        return { color: cityData ? "#475569" : "#c2410c", weight: cityData ? 1.5 : 1.15, fillColor: cityData ? getCityDataColor(districtName) : noDataMapColor, fillOpacity: cityData ? 0.9 : 0.88 };
     };
     const onEachDistrictFeature = (feature: any, layer: any) => {
         const districtName = getDistrictNameFromFeature(feature);
@@ -666,12 +686,37 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         const amount = Number(cityData?.amount || 0);
         const label = `<div style="text-align:center;line-height:1.15;white-space:nowrap"><div style="font-size:${cityData ? "13px" : "11px"};font-weight:800;color:#0f172a;text-shadow:0 1px 2px rgba(255,255,255,.98)">${districtName}</div>${cityData ? `<div style="font-size:12px;font-weight:900;color:#334155;text-shadow:0 1px 2px rgba(255,255,255,.98)">${formatAmount(amount)}</div>` : ""}</div>`;
         layer.bindTooltip(label, { permanent: true, direction: "center", className: "state-map-label", opacity: 1 });
-        layer.bindPopup(`<div style="min-width:170px"><div style="font-weight:800;margin-bottom:6px">${districtName}</div><div>Amount: <b>${formatFullAmount(amount)}</b></div><div>Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div>Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div></div>`);
+        // ⭐ UPDATED
+        const netSalesAmount = Number(cityData?.salesAmount || 0) - Number(cityData?.salesReturnAmount || 0);
+        const netPurchaseAmount = Number(cityData?.purchaseAmount || 0) - Number(cityData?.purchaseReturnAmount || 0);
+        layer.bindPopup(`<div style="min-width:230px"><div style="font-weight:800;margin-bottom:8px">${districtName}</div><div style="margin-bottom:4px">Amount: <b>${formatFullAmount(amount)}</b></div><div style="margin-bottom:4px">Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div style="margin-bottom:8px">Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div><div style="border-top:1px solid #e5e7eb;padding-top:8px"><div style="margin-bottom:6px;color:#16a34a">Net Sales: <b>${formatFullAmount(netSalesAmount)}</b></div><div style="color:#dc2626">Net Purchase: <b>${formatFullAmount(netPurchaseAmount)}</b></div></div></div>`);
         layer.on({
             mouseover: (event: any) => event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 }),
             mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature))
         });
     };
+    // ⭐ UPDATED
+    const mapDistrictList: any[] = Array.isArray(mapGeoJson?.features)
+        ? Array.from(new Map(mapGeoJson.features.map((feature: any) => {
+            const districtName = getDistrictNameFromFeature(feature);
+            const cityData = findMapCityData(districtName);
+            return [normalizeDistrictKey(districtName), {
+                city: districtName,
+                amount: Number(cityData?.amount || 0),
+                transactions: Number(cityData?.transactions || 0),
+                businesses: Number(cityData?.businesses || 0),
+                // ⭐ UPDATED
+                salesAmount: Number(cityData?.salesAmount || 0),
+                salesReturnAmount: Number(cityData?.salesReturnAmount || 0),
+                purchaseAmount: Number(cityData?.purchaseAmount || 0),
+                purchaseReturnAmount: Number(cityData?.purchaseReturnAmount || 0),
+                hasData: !!cityData
+            }];
+        }).filter(([key]: any) => key)).values())
+            // ⭐ UPDATED
+            .filter((item: any) => item.hasData)
+            .sort((a: any, b: any) => String(a.city).localeCompare(String(b.city)))
+        : [];
     const disabled = false;
     const reactSelectStyles: any = useMemo(() => ({
         control: (base: any, state: any) => ({
@@ -1883,8 +1928,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
             <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h2 className="text-sm font-black text-card-foreground">State Map</h2>
-                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
+                    {/* <h2 className="text-sm font-black text-card-foreground">State Map</h2>
+                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p> */}
                 </div>
 
                 <div className="w-full md:w-[320px]">
@@ -1898,33 +1943,67 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                     <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
                 </div>
-            </div>) : (<div className="user-explorer-state-map relative z-0 isolate min-h-[700px] flex-1 overflow-hidden bg-background/30">
-                {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
-                    <Loader2 size={18} className="animate-spin" />
-                    Loading {selectedMapState?.label} map...
-                </div>)}
+            </div>) : (
+                // ⭐ UPDATED
+                <div className="grid min-h-[65vh] flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="user-explorer-state-map relative z-0 isolate min-h-[65vh] overflow-hidden bg-background/30">
+                        {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
+                            <Loader2 size={18} className="animate-spin" />
+                            Loading {selectedMapState?.label} map...
+                        </div>)}
 
-                {!mapGeoJsonLoading && mapGeoJson ? (<>
-                    <MapContainer key={selectedMapState?.value} center={[20.5937, 78.9629]} zoom={5} zoomSnap={0.1} zoomDelta={0.1} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} boxZoom={false} keyboard={false} touchZoom={false} style={{ height: "100%", width: "100%", background: "transparent" }}>
-                        <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
-                        <FitGeoJsonBounds data={mapGeoJson} />
-                    </MapContainer>
+                        {!mapGeoJsonLoading && mapGeoJson ? (<>
+                            <MapContainer key={selectedMapState?.value} center={[20.5937, 78.9629]} zoom={5} zoomSnap={0.1} zoomDelta={0.1} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} boxZoom={false} keyboard={false} touchZoom={false} style={{ height: "100%", width: "100%", background: "transparent" }}>
+                                <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
+                                <FitGeoJsonBounds data={mapGeoJson} />
+                            </MapContainer>
 
-                    <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-2 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground">₹0</span>
-                        <div className="flex overflow-hidden rounded-sm border border-border">
-                            {mapColorScale.map((color) => <span key={color} className="h-3 w-7" style={{ backgroundColor: color }} />)}
+                            <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-3 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
+                                {/* ⭐ UPDATED */}
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                                    <span className="flex overflow-hidden rounded-sm border border-border">
+                                        {dataCityColors.slice(0, 5).map((color) => <span key={color} className="h-3 w-3" style={{ backgroundColor: color }} />)}
+                                    </span>
+                                    Data
+                                </span>
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground"><span className="h-3 w-3 rounded-sm border border-orange-700" style={{ backgroundColor: noDataMapColor }} />No Data</span>
+                            </div>
+                        </>) : !mapGeoJsonLoading && !mapLoading ? (<div className="flex h-full min-h-[65vh] items-center justify-center p-6 text-center">
+                            <div>
+                                <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
+                                <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
+                            </div>
+                        </div>) : null}
+                    </div>
+
+                    {/* ⭐ UPDATED */}
+                    <div className="flex min-h-[65vh] max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+                            <div>
+                                <h3 className="text-sm font-black text-card-foreground">City / District Values</h3>
+                                <p className="text-[11px] font-medium text-muted-foreground">{mapDistrictList.length} cities / districts with data</p>
+                            </div>
+                            <span className="rounded bg-primary/10 px-2 py-1 text-[10px] font-black text-primary">{selectedMapState?.label}</span>
                         </div>
-                        <span className="text-[10px] font-black text-card-foreground">{formatAmount(mapMaxAmount)}</span>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto">
+                            {mapDistrictList.length ? mapDistrictList.map((item: any) => (
+                                <div key={normalizeDistrictKey(item.city)} className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5 last:border-b-0 hover:bg-muted/30">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        {/* ⭐ UPDATED */}
+                                        <span className="h-3 w-3 shrink-0 rounded-sm border" style={{ backgroundColor: item.hasData ? getCityDataColor(item.city) : noDataMapColor, borderColor: item.hasData ? "#475569" : "#c2410c" }} />
+                                        <span className="truncate text-xs font-bold text-card-foreground">{item.city}</span>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                        <p className="text-xs font-black text-card-foreground">{item.hasData ? formatAmount(item.amount) : "No Data"}</p>
+                                        {item.hasData && <p className="text-[10px] font-medium text-muted-foreground">{formatCount(item.transactions)} Txn • {formatCount(item.businesses)} Business</p>}
+                                    </div>
+                                </div>
+                            )) : (<div className="flex h-full items-center justify-center p-4 text-center text-xs font-bold text-muted-foreground">No city / district data found</div>)}
+                        </div>
                     </div>
-                </>) : !mapGeoJsonLoading && !mapLoading ? (<div className="flex h-full min-h-[700px] items-center justify-center p-6 text-center">
-                    <div>
-                        <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
-                        <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
-                    </div>
-                </div>) : null}
-            </div>)}
+                </div>)}
         </div>)}
 
         {/* ================= REQUEST ACCESS MODAL ================= */}
