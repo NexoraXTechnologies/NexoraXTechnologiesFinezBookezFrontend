@@ -634,7 +634,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         { label: "Last Year", value: "last_year" },
     ];
     const mapMaxAmount = Math.max(0, ...mapCityData.map((item: any) => Number(item?.amount || 0)));
-    const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
+    // const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
     // ⭐ UPDATED
     const noDataMapColor = "#f97316";
     const normalizeDistrictKey = (value: any) => normalizeGeoName(value).replace(/\b(district|city district|urban|rural)\b/g, "").replace(/\s+/g, " ").trim();
@@ -665,14 +665,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         const colorIndex = mapCitiesForColor.findIndex((item: any) => normalizeDistrictKey(item?.city) === cityKey);
         return colorIndex >= 0 ? dataCityColors[colorIndex] : "#2563eb";
     };
-    const getMapFillColor = (amount: any) => {
-        const value = Number(amount || 0);
-        if (value <= 0 || mapMaxAmount <= 0)
-            return "#dbe4ee";
-        const ratio = value / mapMaxAmount;
-        const index = Math.min(mapColorScale.length - 1, Math.max(0, Math.ceil(ratio * mapColorScale.length) - 1));
-        return mapColorScale[index];
-    };
+
     const getDistrictNameFromFeature = (feature: any) => feature?.properties?.district || feature?.properties?.DISTRICT || feature?.properties?.district_name || feature?.properties?.DISTRICT_NAME || feature?.properties?.dtname || feature?.properties?.DT_NAME || feature?.properties?.NAME_2 || feature?.properties?.name || feature?.properties?.NAME || "-";
     const getDistrictStyle = (feature: any) => {
         const districtName = getDistrictNameFromFeature(feature);
@@ -1318,7 +1311,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     }
     return (<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
         {/* ================= PAGE TABS ================= */}
-        <div className="mb-4 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
+        <div className=" flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
             {pageTabs.map((tab: any) => {
                 const isActive = activePageTab === tab.key;
                 return (<button key={tab.key} type="button" onClick={() => setActivePageTab(tab.key)} className={`
@@ -1905,18 +1898,6 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         .user-explorer-state-map .leaflet-popup-content-wrapper { border-radius: 8px; }
                     `}</style>
 
-            <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 className="text-sm font-black text-card-foreground">State Map</h2>
-                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
-                </div>
-
-                <div className="w-full md:w-[320px]">
-                    <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
-                    <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
-                </div>
-            </div>
-
             {!selectedMapState ? (<div className="flex min-h-[520px] flex-1 items-center justify-center border border-dashed border-border bg-background/30 text-center">
                 <div>
                     <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
@@ -1957,8 +1938,13 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                     </div>
 
                     {/* ⭐ UPDATED */}
-                    <div className="flex min-h-[65vh] max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
-                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+                        <div className="flex min-h-[65vh] mt-3 max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
+                            <div className="w-full md:w-[320px] p-3">
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
+                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                            </div>
+                            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+
                             <div>
                                 <h3 className="text-sm font-black text-card-foreground">City / District Values</h3>
                                 <p className="text-[11px] font-medium text-muted-foreground">{mapDistrictList.length} cities / districts with data</p>
