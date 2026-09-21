@@ -1311,7 +1311,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     }
     return (<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
         {/* ================= PAGE TABS ================= */}
-        <div className=" flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
+        <div className="mb-2 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
             {pageTabs.map((tab: any) => {
                 const isActive = activePageTab === tab.key;
                 return (<button key={tab.key} type="button" onClick={() => setActivePageTab(tab.key)} className={`
