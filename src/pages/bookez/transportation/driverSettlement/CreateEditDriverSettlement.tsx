@@ -580,6 +580,12 @@ const EXPENSE_ACCOUNT_NAMES: Record<string, string> = {
     otherCost: "Other Expenses",
 };
 
+// ⭐ YELLOW STAR: ADDED — ADVANCED RECEIVE ACCOUNT NAME FALLBACKS
+const ADVANCED_RECEIVE_ACCOUNT_NAMES = [
+    "Advanced Receive",
+    "Advance Received",
+];
+
 const EXPENSE_KEYS = Object.keys(EXPENSE_TYPE_LABELS);
 
 const formatExpenseTypeLabel = (key: string) => {
@@ -1190,6 +1196,27 @@ const CreateEditDriverSettlement = ({
 
     const vendorAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "vendor" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
     const expenseAccountOptions = useMemo(() => accounts.filter((account: any) => normalizeText(account?.accountType) === "expense" && cleanText(account?.accountCode)).map((account: any) => ({ value: cleanText(account?.accountCode), label: cleanText(account?.accountName) || cleanText(account?.accountCode) })), [accounts]);
+
+    // ⭐ YELLOW STAR: ADDED — ADVANCED RECEIVE ACCOUNT FROM ACCOUNT MASTER
+    const advancedReceiveAccount = useMemo(() => {
+        const matchedAccount = accounts.find(
+            (account: any) =>
+                normalizeText(account?.accountType) === "expense" &&
+                ADVANCED_RECEIVE_ACCOUNT_NAMES.some(
+                    (accountName) =>
+                        normalizeText(account?.accountName) ===
+                        normalizeText(accountName)
+                ) &&
+                cleanText(account?.accountCode)
+        );
+
+        return {
+            code: cleanText(matchedAccount?.accountCode),
+            name:
+                cleanText(matchedAccount?.accountName) ||
+                "Advanced Receive",
+        };
+    }, [accounts]);
 
     // ⭐ YELLOW STAR: ADDED — PAYMENT SOURCE ACCOUNT BASED ON PAYMENT MODE
     // Default / Cash => existing Cash In Hand fallback
@@ -2329,6 +2356,16 @@ const CreateEditDriverSettlement = ({
                         );
                     }
 
+                    // ⭐ YELLOW STAR: ADDED — ADVANCED RECEIVE EXPENSE ACCOUNT MUST EXIST
+                    if (
+                        advanceReceivedLineItems.length > 0 &&
+                        !advancedReceiveAccount.code
+                    ) {
+                        throw new Error(
+                            'Expense account "Advanced Receive" was not found in Account Master.'
+                        );
+                    }
+
                     const payBody = expenseLineItems.map(
                         (row: any, index: number) => {
                             // ⭐ FIX — RESOLVE THE ACCOUNT ALREADY SELECTED ON THE EXPENSE ROW FIRST.
@@ -2390,7 +2427,8 @@ const CreateEditDriverSettlement = ({
                         }
                     );
 
-                    // ⭐ YELLOW STAR: ADDED — ADVANCE RECEIVED AS PAYMENT EXPENSE LINE
+                    // ⭐ YELLOW STAR: UPDATED — ADVANCED RECEIVE AS PAYMENT EXPENSE LINE
+                    // ⭐ YELLOW STAR: UPDATED — ADVANCE RECEIVED AS PAYMENT EXPENSE LINE
                     advanceReceivedLineItems.forEach(
                         (row: any, index: number) => {
                             const amountStr = String(row.amount);
@@ -2401,11 +2439,12 @@ const CreateEditDriverSettlement = ({
                                     expenseLineItems.length +
                                     index,
 
+                                // ⭐ YELLOW STAR: UPDATED — ADVANCED RECEIVE ACCOUNT FROM ACCOUNT MASTER
                                 accountCode:
-                                    CASH_IN_HAND_ACCOUNT_CODE,
+                                    advancedReceiveAccount.code,
 
                                 accountName:
-                                    CASH_IN_HAND_ACCOUNT_NAME,
+                                    advancedReceiveAccount.name,
 
                                 amount: amountStr,
                                 netAmount: amountStr,
@@ -2419,14 +2458,13 @@ const CreateEditDriverSettlement = ({
                                         adjustedAmount: amountStr,
                                         purchaseInvoice: "",
                                     },
-                                ],
-
+                                ],                              
                                 customMasters:
                                     row?.customMasters &&
-                                    typeof row.customMasters === "object"
+                                        typeof row.customMasters === "object"
                                         ? { ...row.customMasters }
                                         : {},
-
+                                                                     
                                 remarks:
                                     row?.remarks ||
                                     `Advance Received - Trip ${transportOrderNumber}`,
