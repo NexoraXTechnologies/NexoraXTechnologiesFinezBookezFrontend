@@ -1481,43 +1481,22 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             </div>) : (<div className="flex flex-col gap-4">
                 {/* ================= KPI CARDS ================= */}
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {summaryCards.map((card: any, index: number) => (<motion.div key={card.title} custom={index} variants={cardVariants} initial="hidden" animate="visible" whileHover={{
-                        y: -3,
-                        scale: 1.015,
-                        transition: { duration: 0.2 }
-                    }} className="group relative overflow-hidden rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
-                        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
-                        <div className="relative flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                                <div className="mb-1 flex items-center gap-2">
-                                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">
-                                        {card.title}
-                                    </p>
+                    {summaryCards.map((card: any, index: number) => (<motion.div key={card.title} custom={index} variants={cardVariants} initial="hidden" animate="visible" whileHover={{ y: -3, transition: { duration: 0.2 } }} className={`group relative overflow-hidden rounded-lg border bg-background p-4 shadow-sm transition-all duration-300 hover:shadow-md ${card.accent === "success" ? "border-success/20 hover:border-success/40" : card.accent === "danger" ? "border-danger/20 hover:border-danger/40" : "border-primary/20 hover:border-primary/40"}`}>
+                        {/* ⭐ UPDATED */}
+                        <div className={`absolute left-0 top-0 h-full w-1 ${card.accent === "success" ? "bg-success" : card.accent === "danger" ? "bg-danger" : "bg-primary"}`} />
 
-                                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
-                                        {card.badge}
-                                    </span>
+                        <div className="flex items-start justify-between gap-3 pl-2">
+                            <div className="min-w-0 flex-1">
+                                <div className="mb-2 flex items-center gap-2">
+                                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">{card.title}</p>
+                                    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-black ${card.accent === "success" ? "bg-success/10 text-success" : card.accent === "danger" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>{card.badge}</span>
                                 </div>
 
-                                <h2 className="truncate text-2xl font-black tracking-tight text-card-foreground">
-                                    {card.value}
-                                </h2>
-
-                                <p className="mt-1 truncate text-[11px] font-bold text-muted-foreground">
-                                    {card.helper}
-                                </p>
+                                <h2 className="truncate text-lg font-black tracking-tight text-card-foreground">{card.value}</h2>
+                                <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">{card.helper}</p>
                             </div>
 
-                            <div className={`
-                                                        flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110
-                                                        ${card.accent ===
-                                    "success"
-                                    ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white"
-                                    : card.accent ===
-                                        "danger"
-                                        ? "bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white"
-                                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"}
-                                                    `}>
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${card.accent === "success" ? "bg-success/10 text-success" : card.accent === "danger" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>
                                 {card.icon}
                             </div>
                         </div>
@@ -1928,8 +1907,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
             <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
                 <div>
-                    {/* <h2 className="text-sm font-black text-card-foreground">State Map</h2>
-                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p> */}
+                    <h2 className="text-sm font-black text-card-foreground">State Map</h2>
+                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
                 </div>
 
                 <div className="w-full md:w-[320px]">
@@ -1997,7 +1976,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                                     </div>
                                     <div className="shrink-0 text-right">
                                         <p className="text-xs font-black text-card-foreground">{item.hasData ? formatAmount(item.amount) : "No Data"}</p>
-                                        {item.hasData && <p className="text-[10px] font-medium text-muted-foreground">{formatCount(item.transactions)} Txn • {formatCount(item.businesses)} Business</p>}
+                                        {item.hasData && <p className="text-[10px] font-reguralar text-muted-foreground">{formatCount(item.transactions)} Txn • {formatCount(item.businesses)} Business</p>}
                                     </div>
                                 </div>
                             )) : (<div className="flex h-full items-center justify-center p-4 text-center text-xs font-bold text-muted-foreground">No city / district data found</div>)}
