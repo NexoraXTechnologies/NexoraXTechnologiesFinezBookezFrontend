@@ -2432,17 +2432,17 @@ const EWayBillList = () => {
                         </div>
 
                         {/* <Permission
-            module="bookez"
-            permissionKey="Pass"
-            action="create"
-        >
-            <DataCreateButton
-                {...{
-                    callBackFn: openCreateEWayBill,
-                    text: "Create E-Way Bill",
-                }}
-            />
-        </Permission> */}
+                            module="bookez"
+                            permissionKey="Pass"
+                            action="create"
+                        >
+                            <DataCreateButton
+                                {...{
+                                    callBackFn: openCreateEWayBill,
+                                    text: "Create E-Way Bill",
+                                }}
+                            />
+                        </Permission> */}
 
                     </div>
                 </div>

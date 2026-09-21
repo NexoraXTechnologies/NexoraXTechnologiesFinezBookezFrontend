@@ -22,6 +22,9 @@ import SearchInput from "../../components/searchInput";
 import ConfirmTooltip from "../../components/common/ConfirmTooltip";
 import Pagination from "../../components/pagination";
 
+// ⭐ ADDED — E-WAY BILL CONFIGURATION
+import { getLatestSystemConfiguration } from "../../redux/slices/systemConf";
+
 const initialForm = {
   companyName: "",
   companyEmail: "",
@@ -37,7 +40,12 @@ const initialForm = {
   bankAddress: "",
   logoUri: null,
   signatureUri: null,
+
+  // ⭐ ADDED — E-WAY BILL CREDENTIALS
+  username: "",
+  ewbpwd: "",
 };
+
 
 const CompanyMaster = () => {
   const dispatch = useDispatch();
@@ -56,6 +64,18 @@ const CompanyMaster = () => {
     cities,
     loading: stateCityLoading,
   } = useSelector((s: any) => s.stateCity);
+
+  // ⭐ ADDED — E-WAY BILL CONFIGURATION
+  const {
+    configuration,
+  } = useSelector((s: any) => s.systemConfiguration);
+
+  // ⭐ ADDED — CHECK WHETHER E-WAY BILL IS ENABLED
+  const enableEWayBill =
+    !!configuration
+      ?.systemConfiguration
+      ?.eWayBillConfiguration
+      ?.enableEWayBill;
 
   const [localOffset, setLocalOffset] = useState(0);
   const [localLimit, setLocalLimit] = useState(10);
@@ -129,6 +149,11 @@ const CompanyMaster = () => {
     dispatch(getStates("") as any);
   }, [dispatch]);
 
+  // ⭐ ADDED — LOAD SYSTEM CONFIGURATION FOR E-WAY BILL
+  useEffect(() => {
+    dispatch(getLatestSystemConfiguration() as any);
+  }, [dispatch]);
+
   useEffect(() => {
     fetchCompanies();
   }, [localOffset, localLimit, debouncedSearch]);
@@ -184,6 +209,10 @@ const CompanyMaster = () => {
       bankAddress: data.bankAddress || "",
       logoUri: data.logoUri || null,
       signatureUri: data.signatureUri || null,
+
+      // ⭐ ADDED — E-WAY BILL CREDENTIALS
+      username: data.username || "",
+      ewbpwd: data.ewbpwd || "",
     });
 
     setVerifiedIfscCode(data.ifscCode || "");
@@ -340,6 +369,17 @@ const CompanyMaster = () => {
       e.companyAddress = "Company address is required";
     }
 
+    // ⭐ ADDED — VALIDATE E-WAY BILL CREDENTIALS ONLY WHEN ENABLED
+    if (enableEWayBill) {
+      if (!form.username?.trim()) {
+        e.username = "E-Way Bill username is required";
+      }
+
+      if (!form.ewbpwd?.trim()) {
+        e.ewbpwd = "E-Way Bill password is required";
+      }
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -489,6 +529,7 @@ const CompanyMaster = () => {
   // };
 
   const isIfscVerified = verifiedIfscCode === form.ifscCode?.trim().toUpperCase() && !errors.ifscCode;
+
   const companyColumns = [
     {
       key: "companyName",
@@ -740,6 +781,41 @@ const CompanyMaster = () => {
                 error={errors.gstNumber}
                 type="text"
               />
+
+              {/* ⭐ ADDED — E-WAY BILL CREDENTIALS */}
+              {enableEWayBill && (
+                <>
+                  <TextInput
+                    label="E-Way Bill Username"
+                    mandatory={true}
+                    value={form.username}
+                    onChange={(e: any) =>
+                      updateField(
+                        "username",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Enter E-Way Bill username"
+                    error={errors.username}
+                    type="text"
+                  />
+
+                  <TextInput
+                    label="E-Way Bill Password"
+                    mandatory={true}
+                    value={form.ewbpwd}
+                    onChange={(e: any) =>
+                      updateField(
+                        "ewbpwd",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Enter E-Way Bill password"
+                    error={errors.ewbpwd}
+                    type="password"
+                  />
+                </>
+              )}
 
               {/* IFSC */}
               <div className="relative [&_input]:pr-24">

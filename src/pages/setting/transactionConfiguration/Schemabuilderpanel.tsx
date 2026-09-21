@@ -14,6 +14,10 @@ type SchemaBuilderPanelProps = {
     description: string;
     badgeText?: string;
     schemaData: ModuleSchemaData | null;
+
+    // ⭐ UPDATED: Used to show normal or sectioned schema UI.
+    schemaType: string;
+
     schemaSection: SchemaSection;
     onChangeSchemaSection: (section: SchemaSection) => void;
     fields: SchemaField[];
@@ -28,34 +32,56 @@ type SchemaBuilderPanelProps = {
 };
 
 const schemaColumns = [
-    { key: "key", title: "Key", render: (f: SchemaField) => <span>{f.key}</span> },
-    { key: "label", title: "Label", render: (f: SchemaField) => f.label || "—" },
-    { key: "type", title: "Type", render: (f: SchemaField) => f.type || "—" },
+    {
+        key: "key",
+        title: "Key",
+        render: (f: SchemaField) => <span>{f.key}</span>,
+    },
+    {
+        key: "label",
+        title: "Label",
+        render: (f: SchemaField) => f.label || "—",
+    },
+    {
+        key: "type",
+        title: "Type",
+        render: (f: SchemaField) => f.type || "—",
+    },
     // { key: "reference", title: "Reference", render: (f: SchemaField) => f.ref || "—" },
     {
         key: "isRequired",
         title: "Required",
-        render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isRequired)} />,
+        render: (f: SchemaField) => (
+            <BooleanBadge value={isTruthyFlag(f.isRequired)} />
+        ),
     },
     {
         key: "isSearchable",
         title: "Searchable",
-        render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isSearchable)} />,
+        render: (f: SchemaField) => (
+            <BooleanBadge value={isTruthyFlag(f.isSearchable)} />
+        ),
     },
     {
         key: "isFilterable",
         title: "Filterable",
-        render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isFilterable)} />,
+        render: (f: SchemaField) => (
+            <BooleanBadge value={isTruthyFlag(f.isFilterable)} />
+        ),
     },
     {
         key: "isReadonly",
         title: "Readonly",
-        render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isReadonly)} />,
+        render: (f: SchemaField) => (
+            <BooleanBadge value={isTruthyFlag(f.isReadonly)} />
+        ),
     },
     {
         key: "isHidden",
         title: "Hidden",
-        render: (f: SchemaField) => <BooleanBadge value={isTruthyFlag(f.isHidden)} />,
+        render: (f: SchemaField) => (
+            <BooleanBadge value={isTruthyFlag(f.isHidden)} />
+        ),
     },
 ];
 
@@ -70,6 +96,7 @@ const SchemaBuilderPanel = ({
     description,
     badgeText,
     schemaData,
+    schemaType,
     schemaSection,
     onChangeSchemaSection,
     fields,
@@ -82,6 +109,15 @@ const SchemaBuilderPanel = ({
     onAddField,
     onEditField,
 }: SchemaBuilderPanelProps) => {
+    // ⭐ UPDATED: Check whether the current schema is normal.
+    const isNormalSchema = schemaType === "normal";
+
+    // ⭐ UPDATED: Get active section label only for sectioned schemas.
+    const activeSectionLabel =
+        SCHEMA_SECTIONS.find(
+            (section) => section.key === schemaSection
+        )?.label || "Section";
+
     return (
         <Panel
             title={title}
@@ -104,39 +140,64 @@ const SchemaBuilderPanel = ({
                         {totalFieldCount} Total Fields
                     </span>
 
-                    <DataREfreshButton callBackFn={onRefresh} loading={schemaRefreshing} />
+                    <DataREfreshButton
+                        callBackFn={onRefresh}
+                        loading={schemaRefreshing}
+                    />
 
-                    <DataCreateButton callBackFn={onAddField} text=" Add Field" />
+                    <DataCreateButton
+                        callBackFn={onAddField}
+                        text=" Add Field"
+                    />
                 </div>
             }
         >
-            {/* Header / Body / Footer section tabs */}
-            <div className="flex flex-wrap gap-2 border-b border-border p-4">
-                {SCHEMA_SECTIONS.map((section) => {
-                    const isActive = schemaSection === section.key;
+            {/* ⭐ UPDATED:
+                Header / Body / Footer tabs are shown only
+                when schemaType is sectioned.
+            */}
+            {!isNormalSchema ? (
+                <div className="flex flex-wrap gap-2 border-b border-border p-4">
+                    {SCHEMA_SECTIONS.map((section) => {
+                        const isActive = schemaSection === section.key;
 
-                    return (
-                        <button
-                            key={section.key}
-                            type="button"
-                            onClick={() => onChangeSchemaSection(section.key)}
-                            className={`inline-flex items-center gap-2 rounded-md border px-4 py-1.5 text-sm font-semibold transition ${
-                                isActive
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border bg-background text-muted-foreground hover:bg-muted"
-                            }`}
-                        >
-                            {section.label}
-                        </button>
-                    );
-                })}
-            </div>
+                        return (
+                            <button
+                                key={section.key}
+                                type="button"
+                                onClick={() =>
+                                    onChangeSchemaSection(section.key)
+                                }
+                                className={`inline-flex items-center gap-2 rounded-md border px-4 py-1.5 text-sm font-semibold transition ${
+                                    isActive
+                                        ? "border-primary bg-primary text-primary-foreground"
+                                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                                }`}
+                            >
+                                {section.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : null}
 
             <div className="flex flex-col gap-3 border-b border-border py-3 px-4 sm:flex-row sm:items-center sm:justify-between">
-                <SearchInput search={schemaSearch} setSearch={onChangeSchemaSearch} />
+                <SearchInput
+                    search={schemaSearch}
+                    setSearch={onChangeSchemaSearch}
+                />
+
+                {/* ⭐ UPDATED:
+                    Normal schema shows "Fields".
+                    Sectioned schema shows Header/Body/Footer Fields.
+                */}
                 <Badge
                     count={fields.length}
-                    text={`${SCHEMA_SECTIONS.find((s) => s.key === schemaSection)?.label} Fields:`}
+                    text={
+                        isNormalSchema
+                            ? "Fields:"
+                            : `${activeSectionLabel} Fields:`
+                    }
                     varient="primary"
                 />
             </div>
@@ -146,7 +207,11 @@ const SchemaBuilderPanel = ({
                     columns={schemaColumns}
                     data={fields}
                     loading={!!schemaLoading}
-                    emptyMessage={`No ${schemaSection} fields found. Click Add Field to create the first one.`}
+                    emptyMessage={
+                        isNormalSchema
+                            ? "No fields found. Click Add Field to create the first one."
+                            : `No ${schemaSection} fields found. Click Add Field to create the first one.`
+                    }
                     actions={(field: SchemaField) => (
                         <div className="flex justify-start">
                             <button
@@ -154,7 +219,11 @@ const SchemaBuilderPanel = ({
                                 onClick={() => onEditField(field)}
                                 disabled={isTruthyFlag(field.isDefault)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded border border-border text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
-                                title={field.isSystemGenerated ? "System-generated field" : "Edit schema field"}
+                                title={
+                                    field.isSystemGenerated
+                                        ? "System-generated field"
+                                        : "Edit schema field"
+                                }
                             >
                                 <Edit size={16} />
                             </button>

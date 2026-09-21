@@ -125,13 +125,19 @@ const CustomTransaction = ({
                 {}
         );
 
-    const {
-        transactionsSchema,
-    } = useSelector(
-        (state: any) =>
-            state.getAllTransactionSchema ||
-            {}
-    );
+    // ⭐ UPDATED: Keep the fetched schema tied to the selected module.
+    const [schemaResult, setSchemaResult] = useState<{
+        moduleCode: string;
+        schema: any;
+    } | null>(null);
+
+    const transactionsSchema =
+        schemaResult?.moduleCode === moduleCode
+            ? schemaResult.schema
+            : null;
+
+    // ⭐ UPDATED: Normal schemas store their fields in a flat array.
+    const isNormalSchema = transactionsSchema?.module?.schemaType === "normal";
 
     const transactionItems =
         customTransactionState?.customTransactiondata ||
@@ -220,6 +226,12 @@ const CustomTransaction = ({
         fieldsLoading,
         setFieldsLoading,
     ] = useState(false);
+
+    // ⭐ UPDATED: Previous module fields must not open the next module's form.
+    const [preparedModuleCode, setPreparedModuleCode] = useState("");
+    const schemaReady =
+        preparedModuleCode === moduleCode &&
+        schemaResult?.moduleCode === moduleCode;
 
     const [
         confirmTooltip,
@@ -1012,6 +1024,9 @@ const CustomTransaction = ({
             return;
         }
 
+        // ⭐ UPDATED: Ignore responses from a module that is no longer selected.
+        let active = true;
+
         /*
          * When module changes, reset listing state.
          */
@@ -1023,11 +1038,33 @@ const CustomTransaction = ({
             null
         );
 
+        setSchemaResult(null);
+        setPreparedModuleCode("");
+        setTemplateFields(EMPTY_TEMPLATE_FIELDS);
+        setForm({ body: [] });
+        setErrors({});
+        setFieldsLoading(true);
+
         dispatch(
             getAllTransactionSchema(
                 moduleCode
             )
-        );
+        ).unwrap()
+            .then((schema: any) => {
+                if (active) {
+                    setSchemaResult({ moduleCode, schema });
+                }
+            })
+            .catch((error: any) => {
+                if (active) {
+                    setFieldsLoading(false);
+                    toast.error(error?.message || "Failed to load transaction schema");
+                }
+            });
+
+        return () => {
+            active = false;
+        };
     }, [
         dispatch,
         moduleCode,
@@ -1063,6 +1100,8 @@ const CustomTransaction = ({
     =================================================== */
 
     useEffect(() => {
+        let active = true;
+
         const prepareFields =
             async () => {
                 if (
@@ -1071,7 +1110,9 @@ const CustomTransaction = ({
                     return;
                 }
 
+                // ⭐ UPDATED: Load normal fields as well as sectioned fields.
                 const hasSchema =
+                    (isNormalSchema && Array.isArray(transactionsSchema?.fields)) ||
                     Array.isArray(
                         transactionsSchema?.header
                     ) ||
@@ -1083,6 +1124,7 @@ const CustomTransaction = ({
                     );
 
                 if (!hasSchema) {
+                    setFieldsLoading(false);
                     return;
                 }
 
@@ -1091,10 +1133,27 @@ const CustomTransaction = ({
                         true
                     );
 
-                    const updatedFields =
-                        await loadAllTemplateOptions(
-                            transactionsSchema
+                    // ⭐ UPDATED: Display normal fields using the existing form inputs.
+                    const schemaForForm = isNormalSchema
+                        ? {
+                            ...transactionsSchema,
+                            header: transactionsSchema.fields,
+                            body: [],
+                            footer: [],
+                        }
+                        : transactionsSchema;
+
+                    const updatedFields = isNormalSchema
+                        ? schemaForForm
+                        : await loadAllTemplateOptions(
+                            schemaForForm
                         );
+
+                    // ⭐ UPDATED: A previous module's async options must not
+                    // replace fields belonging to the newly selected module.
+                    if (!active) {
+                        return;
+                    }
 
                     setTemplateFields(
                         updatedFields
@@ -1111,7 +1170,12 @@ const CustomTransaction = ({
                     setEditingVoucherNumber(
                         null
                     );
+                    setPreparedModuleCode(moduleCode);
                 } catch (error) {
+                    if (!active) {
+                        return;
+                    }
+
                     console.error(
                         "Failed to prepare custom transaction fields",
                         error
@@ -1121,16 +1185,23 @@ const CustomTransaction = ({
                         "Failed to load custom transaction fields"
                     );
                 } finally {
-                    setFieldsLoading(
-                        false
-                    );
+                    if (active) {
+                        setFieldsLoading(
+                            false
+                        );
+                    }
                 }
             };
 
         prepareFields();
+
+        return () => {
+            active = false;
+        };
     }, [
         transactionsSchema,
         moduleCode,
+        isNormalSchema,
     ]);
 
     /* ===================================================
@@ -1195,6 +1266,16 @@ const CustomTransaction = ({
             );
         }
 
+        // ⭐ UPDATED: Show names for flat master values in normal transactions.
+        if (isNormalSchema && value && typeof value === "object") {
+            return value.name ||
+                [value.userFirstName, value.userMiddleName, value.userLastName]
+                    .filter(Boolean).join(" ") ||
+                value.code ||
+                value.userMobileNumberHash ||
+                "-";
+        }
+
         const option =
             getOptionByValue(
                 field,
@@ -1224,7 +1305,11 @@ const CustomTransaction = ({
         )
             .filter(
                 (field: any) =>
-                    !field?.isHidden &&
+                    // ⭐ UPDATED: A string "false" must remain visible in both schema types.
+                    field?.isHidden !== true &&
+                    field?.isHidden !== "true" &&
+                    field?.isHidden !== 1 &&
+                    field?.isHidden !== "1" &&
                     !excludedHeaderKeys.has(
                         field?.key
                     )
@@ -1245,6 +1330,8 @@ const CustomTransaction = ({
                         displayFieldValue(
                             field,
 
+                            // ⭐ UPDATED: Read normal values directly from data.
+                            (isNormalSchema ? record?.data?.[field.key] : undefined) ??
                             record
                                 ?.data
                                 ?.header?.[
@@ -1284,7 +1371,8 @@ const CustomTransaction = ({
 
             ...dynamicColumns,
 
-            {
+            // ⭐ UPDATED: Flat normal transactions have no line items.
+            ...(!isNormalSchema ? [{
                 key: "body",
 
                 title: "Items",
@@ -1298,7 +1386,7 @@ const CustomTransaction = ({
                     record?.body
                         ?.length ||
                     0,
-            },
+            }] : []),
 
             {
                 key: "status",
@@ -1317,6 +1405,7 @@ const CustomTransaction = ({
         ];
     }, [
         templateFields,
+        isNormalSchema,
     ]);
 
     /* ===================================================
@@ -1336,6 +1425,11 @@ const CustomTransaction = ({
     };
 
     const openAddModal = () => {
+        // ⭐ UPDATED: Do not open with another module's fields.
+        if (!schemaReady) {
+            return;
+        }
+
         resetForm();
 
         setShowModal(true);
@@ -1344,16 +1438,23 @@ const CustomTransaction = ({
     const openEditModal = (
         record: any
     ) => {
+        // ⭐ UPDATED: Wait for this module's schema before editing.
+        if (!schemaReady) {
+            return;
+        }
+
         const transactionData =
             record?.data ||
             record?.transactionData ||
             record ||
             {};
 
-        const headerData =
-            transactionData?.header ||
-            record?.header ||
-            {};
+        // ⭐ UPDATED: Normal transactions keep field values directly in data.
+        const headerData = isNormalSchema
+            ? transactionData
+            : transactionData?.header ||
+                record?.header ||
+                {};
 
         const footerData =
             transactionData?.footer ||
@@ -1819,6 +1920,36 @@ const CustomTransaction = ({
             string
         > = {};
 
+        // ⭐ UPDATED: Normal schemas have required flat fields and no body rows.
+        if (isNormalSchema) {
+            if ((templateFields?.header || []).length === 0) {
+                toast.error("No schema fields are configured for this module.");
+                return false;
+            }
+
+            (templateFields?.header || []).forEach((field: any) => {
+                if (
+                    field?.isHidden === true ||
+                    field?.isHidden === "true" ||
+                    !(field?.isRequired === true || field?.isRequired === "true")
+                ) {
+                    return;
+                }
+
+                const value = form?.[field.key];
+                if (
+                    fieldIsEmpty(value) ||
+                    (value && typeof value === "object" &&
+                        !Array.isArray(value) && Object.keys(value).length === 0)
+                ) {
+                    nextErrors[field.key] = `${field.label || field.key} is required`;
+                }
+            });
+
+            setErrors(nextErrors);
+            return Object.keys(nextErrors).length === 0;
+        }
+
         (
             templateFields?.header ||
             []
@@ -2021,6 +2152,11 @@ const CustomTransaction = ({
 
     const buildTransactionData =
         () => {
+            // ⭐ UPDATED: Save normal transaction fields as a flat data object.
+            if (isNormalSchema) {
+                return pickSchemaFields(templateFields?.header || [], form);
+            }
+
             return {
                 header:
                     pickSchemaFields(
@@ -2405,10 +2541,12 @@ const CustomTransaction = ({
                 />
             )}
 
-            {!fieldsLoading && (
+            {/* ⭐ UPDATED: Pass flat schema mode only for normal transactions. */}
+            {schemaReady && !fieldsLoading && (
                 <DynamicAddForm
+                    key={moduleCode}
                     show={
-                        showModal
+                        showModal && schemaReady
                     }
                     setShow={
                         setShowModal
@@ -2459,6 +2597,8 @@ const CustomTransaction = ({
                             dynamicFooterArray,
                     }}
                     bodyKey="body"
+                    showBody={!isNormalSchema}
+                    normalSchema={isNormalSchema}
                     handleChange={
                         handleMainChange
                     }

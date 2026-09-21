@@ -40,9 +40,32 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
         Partial<Record<keyof SchemaFieldForm, string>>
     >({});
 
-    const sectionFields: SchemaField[] = Array.isArray(schemaData?.[schemaSection])
+    // ⭐ UPDATED: Only schemas explicitly marked "normal" use flat fields.
+    const schemaType = String(
+        (schemaData as any)?.module?.schemaType ||
+        (schemaContext as any)?.schemaType ||
+        "sectioned"
+    ).toLowerCase();
+
+    const isNormalSchema = schemaType === "normal";
+    const isSectionedSchema = !isNormalSchema;
+
+    // ⭐ UPDATED: Sectioned fields remain separate from normal fields.
+    const sectionFields: SchemaField[] = isSectionedSchema &&
+        Array.isArray(schemaData?.[schemaSection])
         ? (schemaData![schemaSection] as SchemaField[])
         : [];
+
+    // ⭐ UPDATED: Normal schemas read their flat fields array.
+    const normalSchemaFields: SchemaField[] = isNormalSchema &&
+        Array.isArray((schemaData as any)?.fields)
+        ? ((schemaData as any).fields as SchemaField[])
+        : [];
+
+    // ⭐ UPDATED: Search uses the fields for the active schema type.
+    const activeSchemaFields = isNormalSchema
+        ? normalSchemaFields
+        : sectionFields;
 
     const sectionCounts = {
         header: schemaData?.counts?.header ?? 0,
@@ -50,6 +73,11 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
         footer: schemaData?.counts?.footer ?? 0,
         total: schemaData?.counts?.total ?? 0,
     };
+
+    // ⭐ UPDATED: Separate count for the normal schema field list.
+    const normalSchemaFieldCount = isNormalSchema
+        ? (schemaData as any)?.counts?.fields ?? normalSchemaFields.length
+        : 0;
 
     useEffect(() => {
         if (!schemaContext) return;
@@ -74,11 +102,11 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
     const isSchemaSubmitting = !!schemaMutating;
 
     const filteredSchemaFields = useMemo(() => {
-        if (!schemaSearch.trim()) return sectionFields;
+        if (!schemaSearch.trim()) return activeSchemaFields;
 
         const q = schemaSearch.toLowerCase();
 
-        return sectionFields.filter(
+        return activeSchemaFields.filter(
             (field) =>
                 String(field.key || "").toLowerCase().includes(q) ||
                 String(field.label || "").toLowerCase().includes(q) ||
@@ -86,7 +114,7 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
                 String(field.ref || "").toLowerCase().includes(q)
         );
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sectionFields, schemaSearch]);
+    }, [activeSchemaFields, schemaSearch]);
 
     const handleRefreshSchema = async () => {
         setSchemaRefreshing(true);
@@ -151,7 +179,7 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
     };
 
     const buildSchemaFieldPayload = (): SchemaField => {
-        const payload: SchemaField = {
+        const payload = {
             key: schemaForm.key.trim(),
             customMasterCode: schemaForm?.customMasterCode,
             customMasterName: schemaForm?.customMasterName,
@@ -162,8 +190,11 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
             isFilterable: schemaForm.isFilterable,
             isReadonly: schemaForm.isReadonly,
             isHidden: schemaForm.isHidden,
-            section: schemaSection,
-        };
+
+            // ⭐ UPDATED: Preserve the existing sectioned field payload.
+            // Normal field objects have no section; their top-level section is "fields".
+            ...(isSectionedSchema ? { section: schemaSection } : {}),
+        } as SchemaField;
 
         if (schemaForm.ref.trim()) payload.ref = schemaForm.ref.trim();
 
@@ -177,7 +208,9 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
 
         const fieldPayload = buildSchemaFieldPayload();
         const moduleCode = schemaContext.moduleKey?.trim();
-        const section = schemaSection?.trim();
+
+        // ⭐ UPDATED: The normal-schema API contract uses section: "fields".
+        const section = isNormalSchema ? "fields" : schemaSection?.trim();
 
         if (!moduleCode) {
             toast.error("Module is required.");
@@ -226,7 +259,16 @@ export function useTransactionSchema(schemaContext: SchemaContext | null) {
         schemaData,
         schemaLoading,
         isSchemaSubmitting,
+
+        // ⭐ UPDATED: Schema type and separate normal field list.
+        schemaType,
+        isNormalSchema,
+        isSectionedSchema,
         sectionFields,
+        normalSchemaFields,
+        activeSchemaFields,
+        normalSchemaFieldCount,
+
         sectionCounts,
         schemaSection,
         setSchemaSection,

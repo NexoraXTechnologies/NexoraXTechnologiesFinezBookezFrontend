@@ -123,6 +123,10 @@ export const getEmptySystemConfiguration = () => ({
             enableBankStatementImport: false,
         },
 
+        eWayBillConfiguration: {
+            enableEWayBill: false,
+        },
+
         productSettings: {
             allowDuplicateProduct: false,
         },
@@ -206,6 +210,13 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             enableBankStatementImport: toBool(
                 raw?.systemConfiguration?.bankStatementConfiguration
                     ?.enableBankStatementImport
+            ),
+        },
+
+        eWayBillConfiguration: {
+            enableEWayBill: toBool(
+                raw?.systemConfiguration?.eWayBillConfiguration
+                    ?.enableEWayBill
             ),
         },
 
@@ -1200,6 +1211,13 @@ const buildConfigurationPayload = (
                     !!configuration?.systemConfiguration
                         ?.bankStatementConfiguration
                         ?.enableBankStatementImport,
+            },
+
+            eWayBillConfiguration: {
+                enableEWayBill:
+                    !!configuration?.systemConfiguration
+                        ?.eWayBillConfiguration
+                        ?.enableEWayBill,
             },
 
             allowDuplicateProduct:

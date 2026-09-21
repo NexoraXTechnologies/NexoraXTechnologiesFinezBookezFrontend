@@ -246,6 +246,13 @@ const SchemaFieldFormModal = ({
                     ?.moduleName ||
                 ""
             );
+
+            // ⭐ UPDATED: Fill the required label and key when adding a Custom Master field.
+            if (!editingSchemaFieldKey) {
+                handleSchemaLabelChange(
+                    selected?.moduleName || ""
+                );
+            }
         };
 
     const activeCustomMasters =

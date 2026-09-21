@@ -1,12 +1,15 @@
-
-
 import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { ArrowLeft, Boxes, ShieldCheck } from "lucide-react";
 
 import ConfirmTooltip from "../../../components/common/ConfirmTooltip";
 import { clearTransactionSchemaState } from "../../../redux/slices/professionalSlice/transactionSchema";
-import type { SchemaContext, SidebarTab, TransactionItem, TransactionModuleItem } from "./Types";
+import type {
+    SchemaContext,
+    SidebarTab,
+    TransactionItem,
+    TransactionModuleItem,
+} from "./Types";
 import { useTransactionModules } from "./Usetransactionmodules";
 import { TRANSACTIONS } from "./Constants";
 import { useTransactionSchema } from "./Usetransactionschema";
@@ -32,7 +35,10 @@ const TransactionConfiguration = () => {
     );
 
     const schemaContext = useMemo<SchemaContext | null>(() => {
-        if (activeTab === "customTransactionSchema" && selectedCustomModule) {
+        if (
+            activeTab === "customTransactionSchema" &&
+            selectedCustomModule
+        ) {
             return {
                 moduleKey: selectedCustomModule.moduleCode,
                 title: selectedCustomModule.moduleName,
@@ -71,14 +77,24 @@ const TransactionConfiguration = () => {
 
     const tabs: SidebarTab[] = useMemo(
         () => [
-            { key: "overview", label: "All Transactions", icon: <Boxes size={17} /> },
-            ...TRANSACTIONS.map((t) => ({ key: t.key, label: t.name, icon: t.icon })),
-            ...modules.transactionModules.map((item: TransactionModuleItem) => ({
-                key: `custom-${item.moduleCode}`,
-                label: item.moduleName,
-                icon: <ShieldCheck size={17} />,
-                module: item,
+            {
+                key: "overview",
+                label: "All Transactions",
+                icon: <Boxes size={17} />,
+            },
+            ...TRANSACTIONS.map((t) => ({
+                key: t.key,
+                label: t.name,
+                icon: t.icon,
             })),
+            ...modules.transactionModules.map(
+                (item: TransactionModuleItem) => ({
+                    key: `custom-${item.moduleCode}`,
+                    label: item.moduleName,
+                    icon: <ShieldCheck size={17} />,
+                    module: item,
+                })
+            ),
             {
                 key: "customTransactions",
                 label: "Custom Transactions",
@@ -112,10 +128,16 @@ const TransactionConfiguration = () => {
                 <TransactionOverview
                     transactionModules={modules.transactionModules}
                     totalCustomDocs={modules.totalDocs}
-                    onSelectFixedTransaction={(t) => setActiveTab(t.key)}
+                    onSelectFixedTransaction={(t) =>
+                        setActiveTab(t.key)
+                    }
                     onSelectCustomModule={openCustomModuleSchema}
-                    onViewCustomTransactions={() => setActiveTab("customTransactions")}
-                    onCreateCustomTransaction={modules.openCreateModuleForm}
+                    onViewCustomTransactions={() =>
+                        setActiveTab("customTransactions")
+                    }
+                    onCreateCustomTransaction={
+                        modules.openCreateModuleForm
+                    }
                 />
             );
         }
@@ -147,7 +169,10 @@ const TransactionConfiguration = () => {
             );
         }
 
-        if (activeTab === "customTransactionSchema" && selectedCustomModule) {
+        if (
+            activeTab === "customTransactionSchema" &&
+            selectedCustomModule
+        ) {
             return (
                 <div className="space-y-4">
                     <button
@@ -164,10 +189,22 @@ const TransactionConfiguration = () => {
                         description={`Configure fields for ${selectedCustomModule.moduleName}.`}
                         badgeText={selectedCustomModule.moduleCode}
                         schemaData={schema.schemaData}
+
+                        // ⭐ UPDATED: Pass current schema type.
+                        schemaType={schema.schemaType}
+
                         schemaSection={schema.schemaSection}
                         onChangeSchemaSection={schema.setSchemaSection}
                         fields={schema.filteredSchemaFields}
-                        totalFieldCount={schema.sectionCounts.total}
+
+                        // ⭐ UPDATED:
+                        // Normal schemas use their separate flat field count.
+                        totalFieldCount={
+                            schema.isNormalSchema
+                                ? schema.normalSchemaFieldCount
+                                : schema.sectionCounts.total
+                        }
+
                         schemaSearch={schema.schemaSearch}
                         onChangeSchemaSearch={schema.setSchemaSearch}
                         schemaLoading={schema.schemaLoading}
@@ -187,10 +224,22 @@ const TransactionConfiguration = () => {
                     description={selectedTransaction.description}
                     badgeText="Transaction"
                     schemaData={schema.schemaData}
+
+                    // ⭐ UPDATED: Pass current schema type.
+                    schemaType={schema.schemaType}
+
                     schemaSection={schema.schemaSection}
                     onChangeSchemaSection={schema.setSchemaSection}
                     fields={schema.filteredSchemaFields}
-                    totalFieldCount={schema.sectionCounts.total}
+
+                    // ⭐ UPDATED:
+                    // Fixed transactions continue using sectioned total.
+                    totalFieldCount={
+                        schema.isNormalSchema
+                            ? schema.normalSchemaFieldCount
+                            : schema.sectionCounts.total
+                    }
+
                     schemaSearch={schema.schemaSearch}
                     onChangeSchemaSearch={schema.setSchemaSearch}
                     schemaLoading={schema.schemaLoading}
@@ -206,10 +255,16 @@ const TransactionConfiguration = () => {
             <TransactionOverview
                 transactionModules={modules.transactionModules}
                 totalCustomDocs={modules.totalDocs}
-                onSelectFixedTransaction={(t) => setActiveTab(t.key)}
+                onSelectFixedTransaction={(t) =>
+                    setActiveTab(t.key)
+                }
                 onSelectCustomModule={openCustomModuleSchema}
-                onViewCustomTransactions={() => setActiveTab("customTransactions")}
-                onCreateCustomTransaction={modules.openCreateModuleForm}
+                onViewCustomTransactions={() =>
+                    setActiveTab("customTransactions")
+                }
+                onCreateCustomTransaction={
+                    modules.openCreateModuleForm
+                }
             />
         );
     };
@@ -231,9 +286,11 @@ const TransactionConfiguration = () => {
                             <h1 className="text-xl font-semibold text-card-foreground">
                                 Transactions Configuration
                             </h1>
+
                             <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                                Configure fixed-transaction fields and manage custom-transaction
-                                modules with their own schemas.
+                                Configure fixed-transaction fields and manage
+                                custom-transaction modules with their own
+                                schemas.
                             </p>
                         </div>
                     </div>
@@ -242,6 +299,7 @@ const TransactionConfiguration = () => {
                         <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                             {TRANSACTIONS.length} Transactions
                         </span>
+
                         <span className="rounded-md bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                             {modules.totalDocs} Custom Transactions
                         </span>
@@ -256,7 +314,9 @@ const TransactionConfiguration = () => {
                         onSelectTab={handleSelectTab}
                     />
 
-                    <main className="min-w-0 space-y-4">{renderActiveContent()}</main>
+                    <main className="min-w-0 space-y-4">
+                        {renderActiveContent()}
+                    </main>
                 </div>
             </div>
 
@@ -289,18 +349,27 @@ const TransactionConfiguration = () => {
                 <ConfirmTooltip
                     x={modules.confirmTooltip.x}
                     y={modules.confirmTooltip.y}
-                    message={`Are you sure you want to delete ${modules.confirmTooltip?.item?.moduleName || "this custom transaction"
-                        } (${modules.confirmTooltip?.moduleCode || ""})?`}
+                    message={`Are you sure you want to delete ${
+                        modules.confirmTooltip?.item?.moduleName ||
+                        "this custom transaction"
+                    } (${modules.confirmTooltip?.moduleCode || ""})?`}
                     confirmText="Delete"
                     cancelText="Cancel"
                     onConfirm={() =>
-                        modules.handleDeleteConfirm((deletedModuleCode) => {
-                            if (selectedCustomModule?.moduleCode === deletedModuleCode) {
-                                setSelectedCustomModule(null);
-                                dispatch(clearTransactionSchemaState());
-                                setActiveTab("customTransactions");
+                        modules.handleDeleteConfirm(
+                            (deletedModuleCode) => {
+                                if (
+                                    selectedCustomModule?.moduleCode ===
+                                    deletedModuleCode
+                                ) {
+                                    setSelectedCustomModule(null);
+                                    dispatch(
+                                        clearTransactionSchemaState()
+                                    );
+                                    setActiveTab("customTransactions");
+                                }
                             }
-                        })
+                        )
                     }
                     onCancel={modules.closeConfirmTooltip}
                 />

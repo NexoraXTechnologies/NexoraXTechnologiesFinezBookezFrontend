@@ -945,6 +945,41 @@ const SystemConfiguration = () => {
                     />
                 </Panel>
 
+
+                {/* ⭐ ADDED — E-WAY BILL CONFIGURATION */}
+                <Panel
+                    title="E-Way Bill"
+                    description="Control E-Way Bill functionality in BookEZ."
+                    right={
+                        <BadgeStatus
+                            active={
+                                !!systemConfig
+                                    ?.eWayBillConfiguration
+                                    ?.enableEWayBill
+                            }
+                        />
+                    }
+                >
+                    <SettingRow
+                        title="Enable E-Way Bill"
+                        description="Enable or disable E-Way Bill functionality in BookEZ."
+                        value={
+                            !!systemConfig
+                                ?.eWayBillConfiguration
+                                ?.enableEWayBill
+                        }
+                        onChange={(
+                            value
+                        ) =>
+                            updateSystemField(
+                                "eWayBillConfiguration",
+                                "enableEWayBill",
+                                value
+                            )
+                        }
+                    />
+                </Panel>
+
                 <Panel
                     title="WhatsApp Configuration"
                     description="Control WhatsApp sending and module-wise message permissions."
@@ -1603,6 +1638,9 @@ const SystemConfiguration = () => {
                                 )
                             }
                         />
+
+
+
 
                         {/* <SettingRow
                             title="Enable GPS Tracker"

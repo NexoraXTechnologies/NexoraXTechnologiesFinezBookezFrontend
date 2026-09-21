@@ -2440,11 +2440,9 @@ const CreateEditDriverSettlement = ({
                                     index,
 
                                 // ⭐ YELLOW STAR: UPDATED — ADVANCED RECEIVE ACCOUNT FROM ACCOUNT MASTER
-                                accountCode:
-                                    advancedReceiveAccount.code,
+                                accountCode: advancedReceiveAccount.code,
 
-                                accountName:
-                                    advancedReceiveAccount.name,
+                                accountName: advancedReceiveAccount.name,
 
                                 amount: amountStr,
                                 netAmount: amountStr,
@@ -2458,13 +2456,13 @@ const CreateEditDriverSettlement = ({
                                         adjustedAmount: amountStr,
                                         purchaseInvoice: "",
                                     },
-                                ],                              
+                                ],
                                 customMasters:
                                     row?.customMasters &&
                                         typeof row.customMasters === "object"
                                         ? { ...row.customMasters }
                                         : {},
-                                                                     
+
                                 remarks:
                                     row?.remarks ||
                                     `Advance Received - Trip ${transportOrderNumber}`,

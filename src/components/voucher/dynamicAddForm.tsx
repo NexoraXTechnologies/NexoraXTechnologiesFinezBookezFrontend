@@ -204,7 +204,8 @@ const getStandardMasterSelectedValue = (form: any, field: any) => {
 
 // DYNAMIC ADD FORM
 
-const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, bodyCellExtraRenderer, checkAccount, setCheckAccount, onAccountSaved, headerChildExtraRenderer, headerRightContent, customBody }: any) => {
+// ⭐ UPDATED: Optional flags default to the previous sectioned form behavior.
+const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose, onSubmit, form, errors, handleAddRow, handleRefRow, handleDeleteRow, handleRowChange, inputData, bodyKey, addButtonText, handleChange, headerChildTitle, isAddButton = true, isRefrenceAction = false, RefrenceBtnText, bodyTitle, isView = false, contentLoading = false, contentSkeleton, isSummaryFooter, manualselected, enableLocation, isBodyColumnVisible, isBodyCellVisible, isBodyCellDisabled, bodyCellExtraRenderer, checkAccount, setCheckAccount, onAccountSaved, headerChildExtraRenderer, headerRightContent, customBody, showBody = true, normalSchema = false }: any) => {
     const [loadedInputData, setLoadedInputData] = useState<any>(inputData || {});
     const [customMasterOptionsLoading, setCustomMasterOptionsLoading] = useState(false);
 
@@ -301,6 +302,15 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
         if (!customMasterName) return;
 
         const options = getCustomMasterOptions(field);
+        // ⭐ UPDATED: Normal master data belongs under the field's key.
+        if (normalSchema) {
+            const selectedOption = options.find((option: any) => String(option?.value) === String(selectedValue));
+            handleChange(field?.key, selectedOption
+                ? { code: String(selectedOption.value), name: String(selectedOption.label) }
+                : "");
+            return;
+        }
+
         const currentCustomMasters = form?.customMasters && typeof form.customMasters === "object" && !Array.isArray(form.customMasters) ? { ...form.customMasters } : {};
 
         if (selectedValue === undefined || selectedValue === null || String(selectedValue).trim() === "") {
@@ -363,7 +373,40 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
             const options = getStandardMasterOptions(field);
             const selectedValue = getStandardMasterSelectedValue(form, field);
 
-            return <SelectInput label={field?.label} value={selectedValue} mandatory={mandatory} placeholder={`Select ${field?.label}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleChange(field?.key, event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label}...` : options.length > 0 ? `Select ${field?.label}` : `No ${field?.label} found` }, ...options]} />;
+            // ⭐ UPDATED: Preserve existing selection for sectioned schemas;
+            // save an object for standard masters in normal schemas.
+            const handleMasterChange = (value: any) => {
+                if (!normalSchema) {
+                    handleChange(field?.key, value);
+                    return;
+                }
+
+                const selectedOption = options.find((option: any) => String(option?.value) === String(value));
+                if (!selectedOption) {
+                    handleChange(field?.key, "");
+                    return;
+                }
+
+                if (EMPLOYEE_MASTER_FIELD_TYPES.has(fieldType)) {
+                    const raw = selectedOption?.raw?.data || selectedOption?.raw || selectedOption;
+                    handleChange(field?.key, {
+                        userMobileNumberHash: raw?.userMobileNumberHash ?? selectedOption.value,
+                        userFirstName: raw?.userFirstName ?? "",
+                        userMiddleName: raw?.userMiddleName ?? "",
+                        userLastName: raw?.userLastName ?? "",
+                        userType: raw?.userType ?? "",
+                        parentUserMobileNumber: raw?.parentUserMobileNumber ?? "",
+                    });
+                    return;
+                }
+
+                handleChange(field?.key, {
+                    code: String(selectedOption.value),
+                    name: String(selectedOption.label),
+                });
+            };
+
+            return <SelectInput label={field?.label} value={selectedValue} mandatory={mandatory} placeholder={`Select ${field?.label}`} disabled={field?.disabled == "true" || field?.disabled == true || field?.isReadonly == "true" || field?.isReadonly == true || customMasterOptionsLoading} error={errors?.[field?.key]} largeData={true} onChange={(event: any) => handleMasterChange(event?.target?.value ?? "")} options={[{ value: "", label: customMasterOptionsLoading ? `Loading ${field?.label}...` : options.length > 0 ? `Select ${field?.label}` : `No ${field?.label} found` }, ...options]} />;
         }
 
         if (fieldType === "select") {
@@ -413,17 +456,18 @@ const DynamicAddForm = ({ show, setShow, edit, title, subtitle, loading, onClose
                         {enableLocation && <LocationSection form={form} handleChange={handleChange} />}
 
                         {/* BODY ERROR */}
-                        {errors?.[bodyKey] && <p className="mt-4 text-sm text-danger">{errors?.[bodyKey]}</p>}
+                        {showBody && errors?.[bodyKey] && <p className="mt-4 text-sm text-danger">{errors?.[bodyKey]}</p>}
 
                         {/* CUSTOM BODY */}
-                        {!manualselected && customBody && (
+                        {showBody && !manualselected && customBody && (
                             <div className="mt-3 w-full max-w-full">
                                 {customBody}
                             </div>
                         )}
 
                         {/* LINE TABLE */}
-                        {!manualselected && !customBody && (
+                        {/* ⭐ UPDATED: Normal schemas do not have body rows. */}
+                        {showBody && !manualselected && !customBody && (
                             <div className="mt-3 w-full max-w-full">
                                 <EditableLineTable
                                     isView={isView}
