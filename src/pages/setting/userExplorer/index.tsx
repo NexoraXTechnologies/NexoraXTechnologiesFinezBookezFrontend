@@ -59,6 +59,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const [showDashboardFilter, setShowDashboardFilter] = useState(false);
     const [selectedStateCities, setSelectedStateCities] = useState<any[]>([]);
     const [selectedMapState, setSelectedMapState] = useState<any>(DEFAULT_MAP_STATE);
+    // ⭐ UPDATED
+    const [selectedMapShg, setSelectedMapShg] = useState<any>(null);
+    const [selectedMapCmrc, setSelectedMapCmrc] = useState<any>(null);
     const [mapCityData, setMapCityData] = useState<any[]>([]);
     const [mapLoading, setMapLoading] = useState(false);
     const [mapGeoJson, setMapGeoJson] = useState<any>(null);
@@ -68,6 +71,20 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         dbNumbers: [],
         cities: [],
         states: [],
+        // ⭐ UPDATED
+        shg: null,
+        cmrc: null,
+        period: ""
+    });
+    // ⭐ UPDATED
+    const [showBusinessOperationsFilter, setShowBusinessOperationsFilter] = useState(false);
+    const [businessSelectedStateCities, setBusinessSelectedStateCities] = useState<any[]>([]);
+    const [businessOperationsFilters, setBusinessOperationsFilters] = useState<any>({
+        dbNumbers: [],
+        cities: [],
+        states: [],
+        shg: null,
+        cmrc: null,
         period: ""
     });
     const [form, setForm] = useState({
@@ -76,6 +93,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     });
     const [errors, setErrors] = useState<any>({});
     const dashboardFilterRef = useRef<HTMLDivElement | null>(null);
+    // ⭐ UPDATED
+    const businessOperationsFilterRef = useRef<HTMLDivElement | null>(null);
     const requestTableData = Array.isArray(accessRequests)
         ? accessRequests
         : accessRequests?.records && Array.isArray(accessRequests.records)
@@ -284,7 +303,13 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
     const fetchBusinessOperations = async () => {
         try {
-            await dispatch(getBusinessOperationsDashboard({ dbNumbers: [], cities: [], states: [], period: "", modules: [] }) as any).unwrap();
+            await dispatch(getBusinessOperationsDashboard({
+                dbNumbers: multiValueToArray(businessOperationsFilters.dbNumbers),
+                cities: multiValueToArray(businessOperationsFilters.cities),
+                states: multiValueToArray(businessOperationsFilters.states),
+                period: businessOperationsFilters.period,
+                modules: []
+            }) as any).unwrap();
         } catch (err: any) {
             toast.error(err?.message || err?.data?.message || "Failed to fetch business operations");
         }
@@ -295,9 +320,53 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             dbNumbers: [],
             cities: [],
             states: [],
+            // ⭐ UPDATED
+            shg: null,
+            cmrc: null,
             period: ""
         });
         setSelectedStateCities([]);
+    };
+
+    // ⭐ UPDATED
+    const handleBusinessOperationsFilterChange = (key: string, value: any) => {
+        setBusinessOperationsFilters((prev: any) => ({ ...prev, [key]: value }));
+    };
+
+    const clearBusinessOperationsFilters = () => {
+        // ⭐ UPDATED
+        setBusinessOperationsFilters({ dbNumbers: [], cities: [], states: [], shg: null, cmrc: null, period: "" });
+        setBusinessSelectedStateCities([]);
+    };
+
+    const handleBusinessOperationsStateChange = async (value: any) => {
+        const selectedStates = value || [];
+        handleBusinessOperationsFilterChange("states", selectedStates);
+        handleBusinessOperationsFilterChange("cities", []);
+        setBusinessSelectedStateCities([]);
+
+        const stateCodes = selectedStates.map((item: any) => item?.stateCode).filter(Boolean);
+        if (!stateCodes.length) return;
+
+        try {
+            let allCities: any[] = [];
+            for (const stateCode of stateCodes) {
+                const res = await dispatch(
+                    //@ts-ignore
+                    getCitiesByState({ stateCode }) as any).unwrap();
+                const cityList = res?.cities || res?.data || res?.records || res || [];
+                if (Array.isArray(cityList)) allCities = [...allCities, ...cityList];
+            }
+
+            const uniqueCities = Array.from(new Map(allCities.map((city: any) => {
+                const cityName = city?.name?.en || city?.cityName || city?.name || city?.label || city?.city || "";
+                return [cityName, city];
+            })).values()).filter((city: any) => city?.name?.en || city?.cityName || city?.name || city?.label || city?.city);
+
+            setBusinessSelectedStateCities(uniqueCities);
+        } catch (err: any) {
+            toast.error(err?.message || err?.data?.message || "Failed to fetch cities");
+        }
     };
     const handleStateChange = async (value: any) => {
         const selectedStates = value || [];
@@ -518,6 +587,21 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         };
     }, [showDashboardFilter]);
 
+    // ⭐ UPDATED
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!showBusinessOperationsFilter) return;
+            const target = event.target as HTMLElement;
+
+            if (target.closest(".dashboard-select__menu") || target.closest(".dashboard-select__option") || target.closest(".dashboard-select__control")) return;
+
+            if (businessOperationsFilterRef.current && !businessOperationsFilterRef.current.contains(target)) setShowBusinessOperationsFilter(false);
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showBusinessOperationsFilter]);
+
     useEffect(() => {
         if (selectedRequest)
             return;
@@ -556,6 +640,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     useEffect(() => {
         if (activePageTab !== "businessOperations")
             return;
+        // ⭐ UPDATED
+        // @ts-ignore
+        dispatch(getStates() as any);
         fetchBusinessOperations();
     }, [activePageTab]);
 
@@ -623,6 +710,27 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             value: item?.name?.en || item?.value || item?.city || ""
         }))
         : [];
+    // ⭐ UPDATED
+    const businessCityOptions = Array.isArray(businessSelectedStateCities)
+        ? businessSelectedStateCities.map((item: any) => ({
+            label: item?.name?.en || item?.label || item?.city || "-",
+            value: item?.name?.en || item?.value || item?.city || ""
+        }))
+        : [];
+    const shgOptions = [
+        { label: "Sakhi Mahila SHG", value: "SHG-001" },
+        { label: "Pragati Mahila SHG", value: "SHG-002" },
+        { label: "Ujjwala Mahila SHG", value: "SHG-003" },
+        { label: "Savitribai Mahila SHG", value: "SHG-004" },
+        { label: "Asha Mahila SHG", value: "SHG-005" },
+    ];
+    const cmrcOptions = [
+        { label: "Nagpur CMRC", value: "CMRC-001" },
+        { label: "Hingna CMRC", value: "CMRC-002" },
+        { label: "Kamptee CMRC", value: "CMRC-003" },
+        { label: "Umred CMRC", value: "CMRC-004" },
+        { label: "Saoner CMRC", value: "CMRC-005" },
+    ];
     const periodOptions = [
         { label: "Today", value: "today" },
         { label: "Yesterday", value: "yesterday" },
@@ -682,10 +790,62 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         // ⭐ UPDATED
         const netSalesAmount = Number(cityData?.salesAmount || 0) - Number(cityData?.salesReturnAmount || 0);
         const netPurchaseAmount = Number(cityData?.purchaseAmount || 0) - Number(cityData?.purchaseReturnAmount || 0);
-        layer.bindPopup(`<div style="min-width:230px"><div style="font-weight:800;margin-bottom:8px">${districtName}</div><div style="margin-bottom:4px">Amount: <b>${formatFullAmount(amount)}</b></div><div style="margin-bottom:4px">Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div style="margin-bottom:8px">Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div><div style="border-top:1px solid #e5e7eb;padding-top:8px"><div style="margin-bottom:6px;color:#16a34a">Net Sales: <b>${formatFullAmount(netSalesAmount)}</b></div><div style="color:#dc2626">Net Purchase: <b>${formatFullAmount(netPurchaseAmount)}</b></div></div></div>`);
+        // ⭐ UPDATED
+        const hoverTooltip = cityData ? L.tooltip({
+            direction: "top",
+            offset: [0, -12],
+            opacity: 1,
+            interactive: false,
+            permanent: false,
+            className: "state-map-hover-tooltip"
+        }).setContent(`<div style="min-width:220px"><div style="font-weight:800;margin-bottom:8px">${districtName}</div><div style="margin-bottom:4px">Amount: <b>${formatFullAmount(amount)}</b></div><div style="margin-bottom:4px">Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div style="margin-bottom:8px">Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div><div style="border-top:1px solid #e5e7eb;padding-top:8px"><div style="margin-bottom:6px;color:#16a34a">Net Sales: <b>${formatFullAmount(netSalesAmount)}</b></div><div style="color:#dc2626">Net Purchase: <b>${formatFullAmount(netPurchaseAmount)}</b></div></div></div>`) : null;
+
+        // ⭐ UPDATED
+        const updateHoverTooltipPosition = (event: any) => {
+            if (!hoverTooltip || !event.target?._map) return;
+
+            const map = event.target._map;
+            const point = map.latLngToContainerPoint(event.latlng);
+            const mapSize = map.getSize();
+            const showBelow = point.y < 190;
+            const showLeft = point.x > mapSize.x - 280;
+            const showRight = point.x < 280;
+
+            if (showBelow) {
+                hoverTooltip.options.direction = "bottom";
+                hoverTooltip.options.offset = L.point(0, 12);
+            } else if (showLeft) {
+                hoverTooltip.options.direction = "left";
+                hoverTooltip.options.offset = L.point(-12, 0);
+            } else if (showRight) {
+                hoverTooltip.options.direction = "right";
+                hoverTooltip.options.offset = L.point(12, 0);
+            } else {
+                hoverTooltip.options.direction = "top";
+                hoverTooltip.options.offset = L.point(0, -12);
+            }
+
+            hoverTooltip.setLatLng(event.latlng);
+            hoverTooltip.update();
+        };
+
+        layer.off("click");
         layer.on({
-            mouseover: (event: any) => event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 }),
-            mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature))
+            mouseover: (event: any) => {
+                event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 });
+
+                if (hoverTooltip && event.target?._map) {
+                    updateHoverTooltipPosition(event);
+                    event.target._map.openTooltip(hoverTooltip, event.latlng);
+                }
+            },
+            mousemove: (event: any) => {
+                updateHoverTooltipPosition(event);
+            },
+            mouseout: (event: any) => {
+                event.target.setStyle(getDistrictStyle(feature));
+                if (hoverTooltip && event.target?._map) event.target._map.closeTooltip(hoverTooltip);
+            }
         });
     };
     // ⭐ UPDATED
@@ -1443,6 +1603,19 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.dbNumbers} onChange={(value: any) => handleDashboardFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
+                        {/* ⭐ UPDATED */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">SHG</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.shg} onChange={(value: any) => handleDashboardFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">CMRC</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.cmrc} onChange={(value: any) => handleDashboardFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
                         <SelectInput label="Period" value={dashboardFilters.period} placeholder="Select Period" onChange={(e: any) => handleDashboardFilterChange("period", e?.target?.value)} options={periodOptions} />
                     </div>
 
@@ -1866,17 +2039,84 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
         {/* ================= BUSINESS OPERATIONS TAB ================= */}
         {activePageTab === "businessOperations" && (<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background/70 p-4 shadow-sm">
+            <div ref={businessOperationsFilterRef} className="relative flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background/70 p-4 shadow-sm">
                 <div>
                     <h2 className="text-sm font-black text-card-foreground">Business Operations</h2>
                     <p className="text-xs font-medium text-muted-foreground">Entrepreneur business operations summary across all accessible databases.</p>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <Badge {...{ count: businessOperationsData?.totalBusinesses || businessOperationsRows.length, text: "Total Businesses:" }} />
+
+                    {/* ⭐ UPDATED */}
+                    <button type="button" onClick={() => setShowBusinessOperationsFilter((prev) => !prev)} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted">
+                        <Filter size={14} />
+                        Filter
+                    </button>
+
                     <button type="button" onClick={fetchBusinessOperations} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
                         {businessOperationsLoading ? <><Loader2 size={15} className="animate-spin" />Loading...</> : <><RotateCcw size={15} />Refresh</>}
                     </button>
                 </div>
+
+                {/* ⭐ UPDATED */}
+                {showBusinessOperationsFilter && (<div className="absolute right-4 top-[72px] z-50 w-[min(720px,calc(100vw-2rem))] rounded border border-border bg-card p-4 shadow-2xl">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-black text-card-foreground">Business Operations Filters</h3>
+                            <p className="text-xs font-medium text-muted-foreground">Select filters and apply.</p>
+                        </div>
+
+                        <button type="button" onClick={() => setShowBusinessOperationsFilter(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded hover:bg-muted">
+                            <X size={15} />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">States</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.states} onChange={handleBusinessOperationsStateChange} options={stateOptions} placeholder="Select States" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">Cities</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.cities} onChange={(value: any) => handleBusinessOperationsFilterChange("cities", value || [])} options={businessCityOptions} placeholder="Select Cities" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">DB Numbers</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.dbNumbers} onChange={(value: any) => handleBusinessOperationsFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">SHG</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.shg} onChange={(value: any) => handleBusinessOperationsFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">CMRC</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.cmrc} onChange={(value: any) => handleBusinessOperationsFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <SelectInput label="Period" value={businessOperationsFilters.period} placeholder="Select Period" onChange={(e: any) => handleBusinessOperationsFilterChange("period", e?.target?.value)} options={periodOptions} />
+                    </div>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                        <button type="button" onClick={clearBusinessOperationsFilters} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+                            <X size={14} />
+                            Clear
+                        </button>
+
+                        <button type="button" onClick={async () => {
+                            await fetchBusinessOperations();
+                            setShowBusinessOperationsFilter(false);
+                        }} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                            {businessOperationsLoading ? (<><Loader2 size={15} className="animate-spin" />Loading...</>) : (<><BarChart3 size={15} />Apply</>)}
+                        </button>
+                    </div>
+                </div>)}
             </div>
             {businessOperationsLoading ? (<div className="flex min-h-[300px] flex-1 items-center justify-center rounded border border-border bg-background">
                 <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
@@ -1895,6 +2135,10 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         .user-explorer-state-map .leaflet-pane.leaflet-map-pane { cursor: default; }
                         .user-explorer-state-map .leaflet-tooltip.state-map-label { background: transparent; border: 0; box-shadow: none; padding: 0; }
                         .user-explorer-state-map .leaflet-tooltip.state-map-label:before { display: none; }
+                        /* ⭐ UPDATED */
+                        /* ⭐ UPDATED */
+                        .user-explorer-state-map .leaflet-tooltip.state-map-hover-tooltip { background: var(--background); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); color: var(--foreground); padding: 10px 12px; pointer-events: none; }
+                        .user-explorer-state-map .leaflet-tooltip.state-map-hover-tooltip:before { border-top-color: var(--border); }
                         .user-explorer-state-map .leaflet-popup-content-wrapper { border-radius: 8px; }
                     `}</style>
 
@@ -1938,12 +2182,25 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                     </div>
 
                     {/* ⭐ UPDATED */}
-                        <div className="flex min-h-[65vh] mt-3 max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
-                            <div className="w-full md:w-[320px] p-3">
-                                <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
-                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                    <div className="flex min-h-[65vh] mt-3 max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
+                        <div className="w-full p-3">
+                            <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
+                            <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+
+                            {/* ⭐ UPDATED */}
+                            <div className="mt-3">
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">SHG</label>
+                                {/* ⭐ UPDATED */}
+                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapShg} onChange={(value: any) => setSelectedMapShg(value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
                             </div>
-                            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+
+                            <div className="mt-3">
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">CMRC</label>
+                                {/* ⭐ UPDATED */}
+                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapCmrc} onChange={(value: any) => setSelectedMapCmrc(value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                            </div>
+                        </div>
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
 
                             <div>
                                 <h3 className="text-sm font-black text-card-foreground">City / District Values</h3>
