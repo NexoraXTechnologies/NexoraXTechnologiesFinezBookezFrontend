@@ -94,9 +94,7 @@ const Login = () => {
 
   // const [showPass, setShowPass] = useState(false);
   // const { loading: authLoading } = useSelector((state) => state.auth);
-  const { loading: professionalLoading } = useSelector(
-    (state: any) => state.professionalAuth
-  );
+  const { loading: professionalLoading } = useSelector((state: any) => state.professionalAuth);
 
   // const [loginType, setLoginType] = useState("Nexora");
   // const [typedText, setTypedText] = useState("");
@@ -303,9 +301,11 @@ const Login = () => {
               "⚠️ No professional userEmail found for OneSignal login"
             );
           }
-
-          // ⭐ NAVIGATE ONLY AFTER PERMISSIONS ARE LOADED
-          navigate("/");
+          if (user?.accountType == "SUPER_ADMIN") {
+            navigate("/profile");
+          } else {
+            navigate("/");
+          }
         } catch (error: any) {
           console.error("❌ Permission load error:", error);
 

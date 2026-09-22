@@ -59,6 +59,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const [showDashboardFilter, setShowDashboardFilter] = useState(false);
     const [selectedStateCities, setSelectedStateCities] = useState<any[]>([]);
     const [selectedMapState, setSelectedMapState] = useState<any>(DEFAULT_MAP_STATE);
+    // ⭐ UPDATED
+    const [selectedMapShg, setSelectedMapShg] = useState<any>(null);
+    const [selectedMapCmrc, setSelectedMapCmrc] = useState<any>(null);
     const [mapCityData, setMapCityData] = useState<any[]>([]);
     const [mapLoading, setMapLoading] = useState(false);
     const [mapGeoJson, setMapGeoJson] = useState<any>(null);
@@ -68,6 +71,20 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         dbNumbers: [],
         cities: [],
         states: [],
+        // ⭐ UPDATED
+        shg: null,
+        cmrc: null,
+        period: ""
+    });
+    // ⭐ UPDATED
+    const [showBusinessOperationsFilter, setShowBusinessOperationsFilter] = useState(false);
+    const [businessSelectedStateCities, setBusinessSelectedStateCities] = useState<any[]>([]);
+    const [businessOperationsFilters, setBusinessOperationsFilters] = useState<any>({
+        dbNumbers: [],
+        cities: [],
+        states: [],
+        shg: null,
+        cmrc: null,
         period: ""
     });
     const [form, setForm] = useState({
@@ -76,6 +93,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     });
     const [errors, setErrors] = useState<any>({});
     const dashboardFilterRef = useRef<HTMLDivElement | null>(null);
+    // ⭐ UPDATED
+    const businessOperationsFilterRef = useRef<HTMLDivElement | null>(null);
     const requestTableData = Array.isArray(accessRequests)
         ? accessRequests
         : accessRequests?.records && Array.isArray(accessRequests.records)
@@ -284,7 +303,13 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
     const fetchBusinessOperations = async () => {
         try {
-            await dispatch(getBusinessOperationsDashboard({ dbNumbers: [], cities: [], states: [], period: "", modules: [] }) as any).unwrap();
+            await dispatch(getBusinessOperationsDashboard({
+                dbNumbers: multiValueToArray(businessOperationsFilters.dbNumbers),
+                cities: multiValueToArray(businessOperationsFilters.cities),
+                states: multiValueToArray(businessOperationsFilters.states),
+                period: businessOperationsFilters.period,
+                modules: []
+            }) as any).unwrap();
         } catch (err: any) {
             toast.error(err?.message || err?.data?.message || "Failed to fetch business operations");
         }
@@ -295,9 +320,53 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             dbNumbers: [],
             cities: [],
             states: [],
+            // ⭐ UPDATED
+            shg: null,
+            cmrc: null,
             period: ""
         });
         setSelectedStateCities([]);
+    };
+
+    // ⭐ UPDATED
+    const handleBusinessOperationsFilterChange = (key: string, value: any) => {
+        setBusinessOperationsFilters((prev: any) => ({ ...prev, [key]: value }));
+    };
+
+    const clearBusinessOperationsFilters = () => {
+        // ⭐ UPDATED
+        setBusinessOperationsFilters({ dbNumbers: [], cities: [], states: [], shg: null, cmrc: null, period: "" });
+        setBusinessSelectedStateCities([]);
+    };
+
+    const handleBusinessOperationsStateChange = async (value: any) => {
+        const selectedStates = value || [];
+        handleBusinessOperationsFilterChange("states", selectedStates);
+        handleBusinessOperationsFilterChange("cities", []);
+        setBusinessSelectedStateCities([]);
+
+        const stateCodes = selectedStates.map((item: any) => item?.stateCode).filter(Boolean);
+        if (!stateCodes.length) return;
+
+        try {
+            let allCities: any[] = [];
+            for (const stateCode of stateCodes) {
+                const res = await dispatch(
+                    //@ts-ignore
+                    getCitiesByState({ stateCode }) as any).unwrap();
+                const cityList = res?.cities || res?.data || res?.records || res || [];
+                if (Array.isArray(cityList)) allCities = [...allCities, ...cityList];
+            }
+
+            const uniqueCities = Array.from(new Map(allCities.map((city: any) => {
+                const cityName = city?.name?.en || city?.cityName || city?.name || city?.label || city?.city || "";
+                return [cityName, city];
+            })).values()).filter((city: any) => city?.name?.en || city?.cityName || city?.name || city?.label || city?.city);
+
+            setBusinessSelectedStateCities(uniqueCities);
+        } catch (err: any) {
+            toast.error(err?.message || err?.data?.message || "Failed to fetch cities");
+        }
     };
     const handleStateChange = async (value: any) => {
         const selectedStates = value || [];
@@ -394,13 +463,20 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         try {
             setMapLoading(true);
             const response = await dispatch(getStateCityDashboard({ state: option.value }) as any).unwrap();
-            const cities = Array.isArray(response?.cities) ? response.cities : [];
+            // ⭐ UPDATED
+            const cities = Array.isArray(response) ? response : Array.isArray(response?.cities) ? response.cities : [];
             const normalized = cities
                 .map((item: any) => ({
                     city: getCityName(item?.city),
                     amount: Number(item?.totalAmount || 0),
                     transactions: Number(item?.totalCount || 0),
-                    businesses: Number(item?.totalBusinesses || 0)
+                    businesses: Number(item?.totalBusinesses || 0),
+                    // ⭐ UPDATED
+                    // ⭐ UPDATED
+                    salesAmount: Number(item?.salesInvoice?.totalAmount || 0),
+                    salesReturnAmount: Number(item?.salesInvoiceReturn?.totalAmount || 0),
+                    purchaseAmount: Number(item?.purchaseInvoice?.totalAmount || 0),
+                    purchaseReturnAmount: Number(item?.purchaseReturn?.totalAmount || 0)
                 }))
                 .filter((item: any) => item.city)
                 .sort((a: any, b: any) => b.amount - a.amount);
@@ -511,6 +587,21 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         };
     }, [showDashboardFilter]);
 
+    // ⭐ UPDATED
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!showBusinessOperationsFilter) return;
+            const target = event.target as HTMLElement;
+
+            if (target.closest(".dashboard-select__menu") || target.closest(".dashboard-select__option") || target.closest(".dashboard-select__control")) return;
+
+            if (businessOperationsFilterRef.current && !businessOperationsFilterRef.current.contains(target)) setShowBusinessOperationsFilter(false);
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showBusinessOperationsFilter]);
+
     useEffect(() => {
         if (selectedRequest)
             return;
@@ -549,6 +640,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     useEffect(() => {
         if (activePageTab !== "businessOperations")
             return;
+        // ⭐ UPDATED
+        // @ts-ignore
+        dispatch(getStates() as any);
         fetchBusinessOperations();
     }, [activePageTab]);
 
@@ -616,6 +710,27 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             value: item?.name?.en || item?.value || item?.city || ""
         }))
         : [];
+    // ⭐ UPDATED
+    const businessCityOptions = Array.isArray(businessSelectedStateCities)
+        ? businessSelectedStateCities.map((item: any) => ({
+            label: item?.name?.en || item?.label || item?.city || "-",
+            value: item?.name?.en || item?.value || item?.city || ""
+        }))
+        : [];
+    const shgOptions = [
+        { label: "Sakhi Mahila SHG", value: "SHG-001" },
+        { label: "Pragati Mahila SHG", value: "SHG-002" },
+        { label: "Ujjwala Mahila SHG", value: "SHG-003" },
+        { label: "Savitribai Mahila SHG", value: "SHG-004" },
+        { label: "Asha Mahila SHG", value: "SHG-005" },
+    ];
+    const cmrcOptions = [
+        { label: "Nagpur CMRC", value: "CMRC-001" },
+        { label: "Hingna CMRC", value: "CMRC-002" },
+        { label: "Kamptee CMRC", value: "CMRC-003" },
+        { label: "Umred CMRC", value: "CMRC-004" },
+        { label: "Saoner CMRC", value: "CMRC-005" },
+    ];
     const periodOptions = [
         { label: "Today", value: "today" },
         { label: "Yesterday", value: "yesterday" },
@@ -627,7 +742,9 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         { label: "Last Year", value: "last_year" },
     ];
     const mapMaxAmount = Math.max(0, ...mapCityData.map((item: any) => Number(item?.amount || 0)));
-    const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
+    // const mapColorScale = ["#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02", "#b10026"];
+    // ⭐ UPDATED
+    const noDataMapColor = "#f97316";
     const normalizeDistrictKey = (value: any) => normalizeGeoName(value).replace(/\b(district|city district|urban|rural)\b/g, "").replace(/\s+/g, " ").trim();
     const findMapCityData = (districtName: any) => {
         const districtKey = normalizeDistrictKey(districtName);
@@ -647,18 +764,22 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             return districtKey.includes(cityKey) || cityKey.includes(districtKey);
         }) || null;
     };
-    const getMapFillColor = (amount: any) => {
-        const value = Number(amount || 0);
-        if (value <= 0 || mapMaxAmount <= 0)
-            return "#dbe4ee";
-        const ratio = value / mapMaxAmount;
-        const index = Math.min(mapColorScale.length - 1, Math.max(0, Math.ceil(ratio * mapColorScale.length) - 1));
-        return mapColorScale[index];
+    // ⭐ UPDATED
+    const mapCitiesForColor = [...mapCityData].sort((a: any, b: any) => String(a?.city || "").localeCompare(String(b?.city || "")));
+    const dataCityColors = mapCitiesForColor.map((_: any, index: number) => `hsl(${(index * 47 + 210) % 360} 72% 48%)`);
+    const getCityDataColor = (cityName: any) => {
+        const cityData = findMapCityData(cityName);
+        const cityKey = normalizeDistrictKey(cityData?.city || cityName);
+        const colorIndex = mapCitiesForColor.findIndex((item: any) => normalizeDistrictKey(item?.city) === cityKey);
+        return colorIndex >= 0 ? dataCityColors[colorIndex] : "#2563eb";
     };
+
     const getDistrictNameFromFeature = (feature: any) => feature?.properties?.district || feature?.properties?.DISTRICT || feature?.properties?.district_name || feature?.properties?.DISTRICT_NAME || feature?.properties?.dtname || feature?.properties?.DT_NAME || feature?.properties?.NAME_2 || feature?.properties?.name || feature?.properties?.NAME || "-";
     const getDistrictStyle = (feature: any) => {
-        const cityData = findMapCityData(getDistrictNameFromFeature(feature));
-        return { color: cityData ? "#64748b" : "#94a3b8", weight: cityData ? 1.5 : 1.15, fillColor: getMapFillColor(cityData?.amount), fillOpacity: cityData ? 0.98 : 0.88 };
+        const districtName = getDistrictNameFromFeature(feature);
+        const cityData = findMapCityData(districtName);
+        // ⭐ UPDATED
+        return { color: cityData ? "#475569" : "#c2410c", weight: cityData ? 1.5 : 1.15, fillColor: cityData ? getCityDataColor(districtName) : noDataMapColor, fillOpacity: cityData ? 0.9 : 0.88 };
     };
     const onEachDistrictFeature = (feature: any, layer: any) => {
         const districtName = getDistrictNameFromFeature(feature);
@@ -666,12 +787,89 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
         const amount = Number(cityData?.amount || 0);
         const label = `<div style="text-align:center;line-height:1.15;white-space:nowrap"><div style="font-size:${cityData ? "13px" : "11px"};font-weight:800;color:#0f172a;text-shadow:0 1px 2px rgba(255,255,255,.98)">${districtName}</div>${cityData ? `<div style="font-size:12px;font-weight:900;color:#334155;text-shadow:0 1px 2px rgba(255,255,255,.98)">${formatAmount(amount)}</div>` : ""}</div>`;
         layer.bindTooltip(label, { permanent: true, direction: "center", className: "state-map-label", opacity: 1 });
-        layer.bindPopup(`<div style="min-width:170px"><div style="font-weight:800;margin-bottom:6px">${districtName}</div><div>Amount: <b>${formatFullAmount(amount)}</b></div><div>Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div>Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div></div>`);
+        // ⭐ UPDATED
+        const netSalesAmount = Number(cityData?.salesAmount || 0) - Number(cityData?.salesReturnAmount || 0);
+        const netPurchaseAmount = Number(cityData?.purchaseAmount || 0) - Number(cityData?.purchaseReturnAmount || 0);
+        // ⭐ UPDATED
+        const hoverTooltip = cityData ? L.tooltip({
+            direction: "top",
+            offset: [0, -12],
+            opacity: 1,
+            interactive: false,
+            permanent: false,
+            className: "state-map-hover-tooltip"
+        }).setContent(`<div style="min-width:220px"><div style="font-weight:800;margin-bottom:8px">${districtName}</div><div style="margin-bottom:4px">Amount: <b>${formatFullAmount(amount)}</b></div><div style="margin-bottom:4px">Transactions: <b>${formatCount(cityData?.transactions || 0)}</b></div><div style="margin-bottom:8px">Businesses: <b>${formatCount(cityData?.businesses || 0)}</b></div><div style="border-top:1px solid #e5e7eb;padding-top:8px"><div style="margin-bottom:6px;color:#16a34a">Net Sales: <b>${formatFullAmount(netSalesAmount)}</b></div><div style="color:#dc2626">Net Purchase: <b>${formatFullAmount(netPurchaseAmount)}</b></div></div></div>`) : null;
+
+        // ⭐ UPDATED
+        const updateHoverTooltipPosition = (event: any) => {
+            if (!hoverTooltip || !event.target?._map) return;
+
+            const map = event.target._map;
+            const point = map.latLngToContainerPoint(event.latlng);
+            const mapSize = map.getSize();
+            const showBelow = point.y < 190;
+            const showLeft = point.x > mapSize.x - 280;
+            const showRight = point.x < 280;
+
+            if (showBelow) {
+                hoverTooltip.options.direction = "bottom";
+                hoverTooltip.options.offset = L.point(0, 12);
+            } else if (showLeft) {
+                hoverTooltip.options.direction = "left";
+                hoverTooltip.options.offset = L.point(-12, 0);
+            } else if (showRight) {
+                hoverTooltip.options.direction = "right";
+                hoverTooltip.options.offset = L.point(12, 0);
+            } else {
+                hoverTooltip.options.direction = "top";
+                hoverTooltip.options.offset = L.point(0, -12);
+            }
+
+            hoverTooltip.setLatLng(event.latlng);
+            hoverTooltip.update();
+        };
+
+        layer.off("click");
         layer.on({
-            mouseover: (event: any) => event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 }),
-            mouseout: (event: any) => event.target.setStyle(getDistrictStyle(feature))
+            mouseover: (event: any) => {
+                event.target.setStyle({ weight: 2.2, color: "#334155", fillOpacity: 1 });
+
+                if (hoverTooltip && event.target?._map) {
+                    updateHoverTooltipPosition(event);
+                    event.target._map.openTooltip(hoverTooltip, event.latlng);
+                }
+            },
+            mousemove: (event: any) => {
+                updateHoverTooltipPosition(event);
+            },
+            mouseout: (event: any) => {
+                event.target.setStyle(getDistrictStyle(feature));
+                if (hoverTooltip && event.target?._map) event.target._map.closeTooltip(hoverTooltip);
+            }
         });
     };
+    // ⭐ UPDATED
+    const mapDistrictList: any[] = Array.isArray(mapGeoJson?.features)
+        ? Array.from(new Map(mapGeoJson.features.map((feature: any) => {
+            const districtName = getDistrictNameFromFeature(feature);
+            const cityData = findMapCityData(districtName);
+            return [normalizeDistrictKey(districtName), {
+                city: districtName,
+                amount: Number(cityData?.amount || 0),
+                transactions: Number(cityData?.transactions || 0),
+                businesses: Number(cityData?.businesses || 0),
+                // ⭐ UPDATED
+                salesAmount: Number(cityData?.salesAmount || 0),
+                salesReturnAmount: Number(cityData?.salesReturnAmount || 0),
+                purchaseAmount: Number(cityData?.purchaseAmount || 0),
+                purchaseReturnAmount: Number(cityData?.purchaseReturnAmount || 0),
+                hasData: !!cityData
+            }];
+        }).filter(([key]: any) => key)).values())
+            // ⭐ UPDATED
+            .filter((item: any) => item.hasData)
+            .sort((a: any, b: any) => String(a.city).localeCompare(String(b.city)))
+        : [];
     const disabled = false;
     const reactSelectStyles: any = useMemo(() => ({
         control: (base: any, state: any) => ({
@@ -1273,7 +1471,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     }
     return (<div className="flex h-full w-full flex-col bg-card p-4 text-card-foreground shadow-sm">
         {/* ================= PAGE TABS ================= */}
-        <div className="mb-4 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
+        <div className="mb-2 flex w-full items-center gap-2 rounded border border-border bg-background/70 p-2">
             {pageTabs.map((tab: any) => {
                 const isActive = activePageTab === tab.key;
                 return (<button key={tab.key} type="button" onClick={() => setActivePageTab(tab.key)} className={`
@@ -1405,6 +1603,19 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.dbNumbers} onChange={(value: any) => handleDashboardFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
+                        {/* ⭐ UPDATED */}
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">SHG</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.shg} onChange={(value: any) => handleDashboardFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">CMRC</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.cmrc} onChange={(value: any) => handleDashboardFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
                         <SelectInput label="Period" value={dashboardFilters.period} placeholder="Select Period" onChange={(e: any) => handleDashboardFilterChange("period", e?.target?.value)} options={periodOptions} />
                     </div>
 
@@ -1436,43 +1647,22 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             </div>) : (<div className="flex flex-col gap-4">
                 {/* ================= KPI CARDS ================= */}
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {summaryCards.map((card: any, index: number) => (<motion.div key={card.title} custom={index} variants={cardVariants} initial="hidden" animate="visible" whileHover={{
-                        y: -3,
-                        scale: 1.015,
-                        transition: { duration: 0.2 }
-                    }} className="group relative overflow-hidden rounded-md border border-border bg-background p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
-                        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
-                        <div className="relative flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                                <div className="mb-1 flex items-center gap-2">
-                                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">
-                                        {card.title}
-                                    </p>
+                    {summaryCards.map((card: any, index: number) => (<motion.div key={card.title} custom={index} variants={cardVariants} initial="hidden" animate="visible" whileHover={{ y: -3, transition: { duration: 0.2 } }} className={`group relative overflow-hidden rounded-lg border bg-background p-4 shadow-sm transition-all duration-300 hover:shadow-md ${card.accent === "success" ? "border-success/20 hover:border-success/40" : card.accent === "danger" ? "border-danger/20 hover:border-danger/40" : "border-primary/20 hover:border-primary/40"}`}>
+                        {/* ⭐ UPDATED */}
+                        <div className={`absolute left-0 top-0 h-full w-1 ${card.accent === "success" ? "bg-success" : card.accent === "danger" ? "bg-danger" : "bg-primary"}`} />
 
-                                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
-                                        {card.badge}
-                                    </span>
+                        <div className="flex items-start justify-between gap-3 pl-2">
+                            <div className="min-w-0 flex-1">
+                                <div className="mb-2 flex items-center gap-2">
+                                    <p className="truncate text-[11px] font-black uppercase tracking-wide text-muted-foreground">{card.title}</p>
+                                    <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-black ${card.accent === "success" ? "bg-success/10 text-success" : card.accent === "danger" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>{card.badge}</span>
                                 </div>
 
-                                <h2 className="truncate text-2xl font-black tracking-tight text-card-foreground">
-                                    {card.value}
-                                </h2>
-
-                                <p className="mt-1 truncate text-[11px] font-bold text-muted-foreground">
-                                    {card.helper}
-                                </p>
+                                <h2 className="truncate text-lg font-black tracking-tight text-card-foreground">{card.value}</h2>
+                                <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">{card.helper}</p>
                             </div>
 
-                            <div className={`
-                                                        flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110
-                                                        ${card.accent ===
-                                    "success"
-                                    ? "bg-success/10 text-success group-hover:bg-success group-hover:text-white"
-                                    : card.accent ===
-                                        "danger"
-                                        ? "bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white"
-                                        : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"}
-                                                    `}>
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${card.accent === "success" ? "bg-success/10 text-success" : card.accent === "danger" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>
                                 {card.icon}
                             </div>
                         </div>
@@ -1849,17 +2039,84 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
 
         {/* ================= BUSINESS OPERATIONS TAB ================= */}
         {activePageTab === "businessOperations" && (<div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background/70 p-4 shadow-sm">
+            <div ref={businessOperationsFilterRef} className="relative flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background/70 p-4 shadow-sm">
                 <div>
                     <h2 className="text-sm font-black text-card-foreground">Business Operations</h2>
                     <p className="text-xs font-medium text-muted-foreground">Entrepreneur business operations summary across all accessible databases.</p>
                 </div>
+
                 <div className="flex items-center gap-2">
                     <Badge {...{ count: businessOperationsData?.totalBusinesses || businessOperationsRows.length, text: "Total Businesses:" }} />
+
+                    {/* ⭐ UPDATED */}
+                    <button type="button" onClick={() => setShowBusinessOperationsFilter((prev) => !prev)} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted">
+                        <Filter size={14} />
+                        Filter
+                    </button>
+
                     <button type="button" onClick={fetchBusinessOperations} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
                         {businessOperationsLoading ? <><Loader2 size={15} className="animate-spin" />Loading...</> : <><RotateCcw size={15} />Refresh</>}
                     </button>
                 </div>
+
+                {/* ⭐ UPDATED */}
+                {showBusinessOperationsFilter && (<div className="absolute right-4 top-[72px] z-50 w-[min(720px,calc(100vw-2rem))] rounded border border-border bg-card p-4 shadow-2xl">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 className="text-sm font-black text-card-foreground">Business Operations Filters</h3>
+                            <p className="text-xs font-medium text-muted-foreground">Select filters and apply.</p>
+                        </div>
+
+                        <button type="button" onClick={() => setShowBusinessOperationsFilter(false)} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded hover:bg-muted">
+                            <X size={15} />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">States</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.states} onChange={handleBusinessOperationsStateChange} options={stateOptions} placeholder="Select States" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">Cities</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.cities} onChange={(value: any) => handleBusinessOperationsFilterChange("cities", value || [])} options={businessCityOptions} placeholder="Select Cities" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">DB Numbers</label>
+                            <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.dbNumbers} onChange={(value: any) => handleBusinessOperationsFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">SHG</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.shg} onChange={(value: any) => handleBusinessOperationsFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <label className="text-sm font-medium text-card-foreground">CMRC</label>
+                            {/* ⭐ UPDATED */}
+                            <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.cmrc} onChange={(value: any) => handleBusinessOperationsFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                        </div>
+
+                        <SelectInput label="Period" value={businessOperationsFilters.period} placeholder="Select Period" onChange={(e: any) => handleBusinessOperationsFilterChange("period", e?.target?.value)} options={periodOptions} />
+                    </div>
+
+                    <div className="mt-4 flex justify-end gap-2">
+                        <button type="button" onClick={clearBusinessOperationsFilters} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded border border-border bg-card px-4 text-xs font-black text-card-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60">
+                            <X size={14} />
+                            Clear
+                        </button>
+
+                        <button type="button" onClick={async () => {
+                            await fetchBusinessOperations();
+                            setShowBusinessOperationsFilter(false);
+                        }} disabled={businessOperationsLoading} className="flex h-9 cursor-pointer items-center justify-center gap-2 rounded bg-primary px-4 text-xs font-black text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">
+                            {businessOperationsLoading ? (<><Loader2 size={15} className="animate-spin" />Loading...</>) : (<><BarChart3 size={15} />Apply</>)}
+                        </button>
+                    </div>
+                </div>)}
             </div>
             {businessOperationsLoading ? (<div className="flex min-h-[300px] flex-1 items-center justify-center rounded border border-border bg-background">
                 <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
@@ -1878,53 +2135,97 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                         .user-explorer-state-map .leaflet-pane.leaflet-map-pane { cursor: default; }
                         .user-explorer-state-map .leaflet-tooltip.state-map-label { background: transparent; border: 0; box-shadow: none; padding: 0; }
                         .user-explorer-state-map .leaflet-tooltip.state-map-label:before { display: none; }
+                        /* ⭐ UPDATED */
+                        /* ⭐ UPDATED */
+                        .user-explorer-state-map .leaflet-tooltip.state-map-hover-tooltip { background: var(--background); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); color: var(--foreground); padding: 10px 12px; pointer-events: none; }
+                        .user-explorer-state-map .leaflet-tooltip.state-map-hover-tooltip:before { border-top-color: var(--border); }
                         .user-explorer-state-map .leaflet-popup-content-wrapper { border-radius: 8px; }
                     `}</style>
-
-            <div className="flex shrink-0 flex-wrap items-end justify-between gap-3">
-                <div>
-                    <h2 className="text-sm font-black text-card-foreground">State Map</h2>
-                    <p className="text-xs font-medium text-muted-foreground">Select a state to view city/district amount directly on the map.</p>
-                </div>
-
-                <div className="w-full md:w-[320px]">
-                    <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
-                    <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
-                </div>
-            </div>
 
             {!selectedMapState ? (<div className="flex min-h-[520px] flex-1 items-center justify-center border border-dashed border-border bg-background/30 text-center">
                 <div>
                     <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
                     <p className="text-sm font-black text-card-foreground">Select a state to show its map</p>
                 </div>
-            </div>) : (<div className="user-explorer-state-map relative z-0 isolate min-h-[700px] flex-1 overflow-hidden bg-background/30">
-                {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
-                    <Loader2 size={18} className="animate-spin" />
-                    Loading {selectedMapState?.label} map...
-                </div>)}
+            </div>) : (
+                // ⭐ UPDATED
+                <div className="grid min-h-[65vh] flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="user-explorer-state-map relative z-0 isolate min-h-[65vh] overflow-hidden bg-background/30">
+                        {(mapLoading || mapGeoJsonLoading) && (<div className="absolute inset-0 z-[1000] flex items-center justify-center gap-2 bg-background/80 text-sm font-bold text-muted-foreground">
+                            <Loader2 size={18} className="animate-spin" />
+                            Loading {selectedMapState?.label} map...
+                        </div>)}
 
-                {!mapGeoJsonLoading && mapGeoJson ? (<>
-                    <MapContainer key={selectedMapState?.value} center={[20.5937, 78.9629]} zoom={5} zoomSnap={0.1} zoomDelta={0.1} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} boxZoom={false} keyboard={false} touchZoom={false} style={{ height: "100%", width: "100%", background: "transparent" }}>
-                        <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
-                        <FitGeoJsonBounds data={mapGeoJson} />
-                    </MapContainer>
+                        {!mapGeoJsonLoading && mapGeoJson ? (<>
+                            <MapContainer key={selectedMapState?.value} center={[20.5937, 78.9629]} zoom={5} zoomSnap={0.1} zoomDelta={0.1} zoomControl={false} attributionControl={false} dragging={false} scrollWheelZoom={false} doubleClickZoom={false} boxZoom={false} keyboard={false} touchZoom={false} style={{ height: "100%", width: "100%", background: "transparent" }}>
+                                <GeoJSON key={`${selectedMapState?.value}-${mapCityData.length}-${mapMaxAmount}`} data={mapGeoJson as any} style={getDistrictStyle as any} onEachFeature={onEachDistrictFeature as any} />
+                                <FitGeoJsonBounds data={mapGeoJson} />
+                            </MapContainer>
 
-                    <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-2 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
-                        <span className="text-[10px] font-bold text-muted-foreground">₹0</span>
-                        <div className="flex overflow-hidden rounded-sm border border-border">
-                            {mapColorScale.map((color) => <span key={color} className="h-3 w-7" style={{ backgroundColor: color }} />)}
+                            <div className="pointer-events-none absolute bottom-4 right-4 z-[900] flex items-center gap-3 rounded bg-background/90 px-3 py-2 shadow-md backdrop-blur-sm">
+                                {/* ⭐ UPDATED */}
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                                    <span className="flex overflow-hidden rounded-sm border border-border">
+                                        {dataCityColors.slice(0, 5).map((color) => <span key={color} className="h-3 w-3" style={{ backgroundColor: color }} />)}
+                                    </span>
+                                    Data
+                                </span>
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground"><span className="h-3 w-3 rounded-sm border border-orange-700" style={{ backgroundColor: noDataMapColor }} />No Data</span>
+                            </div>
+                        </>) : !mapGeoJsonLoading && !mapLoading ? (<div className="flex h-full min-h-[65vh] items-center justify-center p-6 text-center">
+                            <div>
+                                <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
+                                <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
+                            </div>
+                        </div>) : null}
+                    </div>
+
+                    {/* ⭐ UPDATED */}
+                    <div className="flex min-h-[65vh] mt-3 max-h-[65vh] flex-col overflow-hidden rounded border border-border bg-background">
+                        <div className="w-full p-3">
+                            <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
+                            <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+
+                            {/* ⭐ UPDATED */}
+                            <div className="mt-3">
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">SHG</label>
+                                {/* ⭐ UPDATED */}
+                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapShg} onChange={(value: any) => setSelectedMapShg(value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                            </div>
+
+                            <div className="mt-3">
+                                <label className="mb-1 block text-sm font-medium text-card-foreground">CMRC</label>
+                                {/* ⭐ UPDATED */}
+                                <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapCmrc} onChange={(value: any) => setSelectedMapCmrc(value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
+                            </div>
                         </div>
-                        <span className="text-[10px] font-black text-card-foreground">{formatAmount(mapMaxAmount)}</span>
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
+
+                            <div>
+                                <h3 className="text-sm font-black text-card-foreground">City / District Values</h3>
+                                <p className="text-[11px] font-medium text-muted-foreground">{mapDistrictList.length} cities / districts with data</p>
+                            </div>
+                            <span className="rounded bg-primary/10 px-2 py-1 text-[10px] font-black text-primary">{selectedMapState?.label}</span>
+                        </div>
+
+                        <div className="min-h-0 flex-1 overflow-y-auto">
+                            {mapDistrictList.length ? mapDistrictList.map((item: any) => (
+                                <div key={normalizeDistrictKey(item.city)} className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5 last:border-b-0 hover:bg-muted/30">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        {/* ⭐ UPDATED */}
+                                        <span className="h-3 w-3 shrink-0 rounded-sm border" style={{ backgroundColor: item.hasData ? getCityDataColor(item.city) : noDataMapColor, borderColor: item.hasData ? "#475569" : "#c2410c" }} />
+                                        <span className="truncate text-xs font-bold text-card-foreground">{item.city}</span>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                        <p className="text-xs font-black text-card-foreground">{item.hasData ? formatAmount(item.amount) : "No Data"}</p>
+                                        {item.hasData && <p className="text-[10px] font-reguralar text-muted-foreground">{formatCount(item.transactions)} Txn • {formatCount(item.businesses)} Business</p>}
+                                    </div>
+                                </div>
+                            )) : (<div className="flex h-full items-center justify-center p-4 text-center text-xs font-bold text-muted-foreground">No city / district data found</div>)}
+                        </div>
                     </div>
-                </>) : !mapGeoJsonLoading && !mapLoading ? (<div className="flex h-full min-h-[700px] items-center justify-center p-6 text-center">
-                    <div>
-                        <MapPinned size={30} className="mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm font-black text-card-foreground">Map could not be loaded</p>
-                        <p className="mt-1 text-xs font-medium text-muted-foreground">{mapGeoJsonError || `No map data found for ${selectedMapState?.label}`}</p>
-                    </div>
-                </div>) : null}
-            </div>)}
+                </div>)}
         </div>)}
 
         {/* ================= REQUEST ACCESS MODAL ================= */}
