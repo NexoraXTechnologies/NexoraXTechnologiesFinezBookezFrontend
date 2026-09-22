@@ -2665,16 +2665,16 @@ export const getAllEWayBill = createAsyncThunk(
             search = "",
             status = "",
         }: EWayBillState = {},
-        { rejectWithValue, dispatch, getState }
+        { rejectWithValue }
     ) => {
         try {
             // ⭐ YELLOW STAR: ADDED — COMPANY MASTER GST NUMBER
-            const ewbCredentials = await getCompanyMasterEWayBillCredentials(dispatch, getState);
+            // const ewbCredentials = await getCompanyMasterEWayBillCredentials(dispatch, getState);
             const response = await professionalAxios.get(
                 "/eTaxSolnMongoApiBackend/users/eWayBill/getAll",
                 {
                     params: {
-                        gstin: ewbCredentials.gstin,
+                        
                         limit,
                         offset,
                         search,
@@ -2715,7 +2715,6 @@ export const getAllTransporterEWayBill = createAsyncThunk(
         {
             authtoken,
             date,
-
             limit = 10,
             offset = 0,
             search = "",
@@ -2731,35 +2730,24 @@ export const getAllTransporterEWayBill = createAsyncThunk(
 
             // ⭐ YELLOW STAR: UPDATED — REMOVE ANY ACCIDENTAL QUOTES
             const normalizedDate =
-                String(
-                    date || ""
-                )
-                    .trim()
-                    .replace(/['"]/g, "");
+                String(date || "").trim().replace(/['"]/g, "");
 
             if (!normalizedAuthToken) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill access token is required",
+                    message: "E-Way Bill access token is required",
                 });
             }
 
             if (!normalizedDate) {
                 return rejectWithValue({
-                    message:
-                        "Date is required",
+                    message: "Date is required",
                 });
             }
 
             // ⭐ YELLOW STAR: ADDED — TRANSPORTER API REQUIRES DD/MM/YYYY
-            if (
-                !/^\d{2}\/\d{2}\/\d{4}$/.test(
-                    normalizedDate
-                )
-            ) {
+            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(normalizedDate)) {
                 return rejectWithValue({
-                    message:
-                        "Date must be in DD/MM/YYYY format",
+                    message: "Date must be in DD/MM/YYYY format",
                 });
             }
 
@@ -2767,38 +2755,17 @@ export const getAllTransporterEWayBill = createAsyncThunk(
             const ewbCredentials = await getCompanyMasterEWayBillCredentials(dispatch, getState, TRANSPORTER_EWB_CREDENTIALS);
 
             const response =
-                await professionalAxios.get(
-                    "/eTaxSolnMongoApiBackend/users/bookez/ewayBill/getEwayBillsForTransporter",
+                await professionalAxios.get("/eTaxSolnMongoApiBackend/users/bookez/ewayBill/getEwayBillsForTransporter",
                     {
                         params: {
-                            action:
-                                TRANSPORTER_EWB_CREDENTIALS.action,
-
-                            aspid:
-                                TRANSPORTER_EWB_CREDENTIALS.aspid,
-
-                            password:
-                                TRANSPORTER_EWB_CREDENTIALS.password,
-
-                            gstin:
-                                ewbCredentials.gstin,
-
-                            // ⭐ YELLOW STAR: ADDED — COMPANY MASTER USERNAME WITH TRANSPORTER DEFAULT
-                            username:
-                                ewbCredentials.username,
-
-                            // ⭐ YELLOW STAR: ADDED — COMPANY MASTER E-WAY BILL PASSWORD WITH TRANSPORTER DEFAULT
-                            ewbpwd:
-                                ewbCredentials.ewbpwd,
-
-                            // ⭐ YELLOW STAR: DYNAMIC TOKEN
-                            authtoken:
-                                normalizedAuthToken,
-
-                            // ⭐ YELLOW STAR: USER SELECTED DATE DD/MM/YYYY
-                            date:
-                                normalizedDate,
-
+                            action: TRANSPORTER_EWB_CREDENTIALS.action,
+                            aspid: TRANSPORTER_EWB_CREDENTIALS.aspid,
+                            password: TRANSPORTER_EWB_CREDENTIALS.password,
+                            gstin: ewbCredentials.gstin,
+                            username: ewbCredentials.username,
+                            ewbpwd: ewbCredentials.ewbpwd,
+                            authtoken: normalizedAuthToken,
+                            date: normalizedDate,
                             limit,
                             offset,
                             search,
@@ -2885,9 +2852,7 @@ type SaveEWayBillPayload = {
 export const saveEWayBill = createAsyncThunk(
     "eWayBill/saveEWayBill",
     async (
-        {
-            payload,
-        }: SaveEWayBillPayload,
+        { payload, }: SaveEWayBillPayload,
         {
             rejectWithValue,
             dispatch,
@@ -2896,49 +2861,33 @@ export const saveEWayBill = createAsyncThunk(
     ) => {
         try {
             if (
-                !payload ||
-                typeof payload !== "object"
+                !payload || typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill payload is required",
+                    message: "E-Way Bill payload is required",
                 });
             }
 
             // ⭐ YELLOW STAR: ADDED — COMPANY MASTER GST NUMBER AND EXISTING E-WAY BILL LOGIN
-            const ewbCredentials =
-                await getCompanyMasterEWayBillCredentials(dispatch, getState);
+            const ewbCredentials = await getCompanyMasterEWayBillCredentials(dispatch, getState);
 
-            const response =
-                await professionalAxios.post(
-                    "/eTaxSolnMongoApiBackend/users/eWayBill/save",
+            const response = await professionalAxios.post("/eTaxSolnMongoApiBackend/users/eWayBill/save",
 
-                    // ⭐ YELLOW STAR: COMPLETE DYNAMIC E-WAY BILL JSON BODY
-                    payload,
+                // ⭐ YELLOW STAR: COMPLETE DYNAMIC E-WAY BILL JSON BODY
+                payload,
 
-                    {
-                        // ⭐ YELLOW STAR: ACCESS-TOKEN CREDENTIALS IN QUERY PARAMS
-                        params: {
-                            action:
-                                "ACCESSTOKEN",
-
-                            aspid:
-                                EWB_CREDENTIALS.aspid,
-
-                            password:
-                                EWB_CREDENTIALS.password,
-
-                            gstin:
-                                ewbCredentials.gstin,
-
-                            username:
-                                ewbCredentials.username,
-
-                            ewbpwd:
-                                ewbCredentials.ewbpwd,
-                        },
-                    }
-                );
+                {
+                    // ⭐ YELLOW STAR: ACCESS-TOKEN CREDENTIALS IN QUERY PARAMS
+                    params: {
+                        action: "ACCESSTOKEN",
+                        aspid: EWB_CREDENTIALS.aspid,
+                        password: EWB_CREDENTIALS.password,
+                        gstin: ewbCredentials.gstin,
+                        username: ewbCredentials.username,
+                        ewbpwd: ewbCredentials.ewbpwd,
+                    },
+                }
+            );
 
             return (
                 response?.data ||
@@ -3194,23 +3143,12 @@ export const getTransporterEWayBillAccessToken = createAsyncThunk(
                 "/eTaxSolnMongoApiBackend/users/bookez/eWayBill/accessToken",
                 {
                     params: {
-                        action:
-                            "ACCESSTOKEN",
-
-                        aspid:
-                            TRANSPORTER_EWB_CREDENTIALS.aspid,
-
-                        password:
-                            TRANSPORTER_EWB_CREDENTIALS.password,
-
-                        gstin:
-                            ewbCredentials.gstin,
-
-                        username:
-                            ewbCredentials.username,
-
-                        ewbpwd:
-                            ewbCredentials.ewbpwd,
+                        action: "ACCESSTOKEN",
+                        aspid: TRANSPORTER_EWB_CREDENTIALS.aspid,
+                        password: TRANSPORTER_EWB_CREDENTIALS.password,
+                        gstin: ewbCredentials.gstin,
+                        username: ewbCredentials.username,
+                        ewbpwd: ewbCredentials.ewbpwd,
                     },
                 }
             );
@@ -3280,7 +3218,6 @@ export const generateEWayBill = createAsyncThunk(
 
                         // ⭐ YELLOW STAR: ADDED — COMPANY MASTER USERNAME
                         username: ewbCredentials.username,
-
                         ewbpwd: ewbCredentials.ewbpwd,
                         authtoken: authtoken.trim(),
                     },
@@ -3336,7 +3273,6 @@ export const getEWayBillFromGst = createAsyncThunk(
 
                         // GST E-Way Bill token
                         authtoken: authtoken.trim(),
-
                         ewbNo,
                     },
                 }
@@ -3380,8 +3316,7 @@ export const updateEWayBill = createAsyncThunk(
 
             if (!normalizedId) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill document ID is required",
+                    message: "E-Way Bill document ID is required",
                 });
             }
 
@@ -3390,25 +3325,20 @@ export const updateEWayBill = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill update payload is required",
+                    message: "E-Way Bill update payload is required",
                 });
             }
 
             const response =
                 await professionalAxios.put(
                     `/eTaxSolnMongoApiBackend/users/eWayBill/update/${normalizedId}`,
-                    payload,
-                    { params: { gstin: ewbCredentials.gstin } }
+                    payload, { params: { gstin: ewbCredentials.gstin } }
                 );
 
-            return (
-                response?.data ||
-                null
-            );
+            return (response?.data || null);
+
         } catch (error: any) {
-            const responseData =
-                error?.response?.data;
+            const responseData = error?.response?.data;
 
             const errorMessage =
                 responseData?.error?.error?.message ||
@@ -3421,19 +3351,9 @@ export const updateEWayBill = createAsyncThunk(
                 "Failed to update E-Way Bill";
 
             return rejectWithValue({
-                message:
-                    errorMessage,
-
-                code:
-                    responseData?.code ||
-                    responseData?.error?.error?.error_cd ||
-                    responseData?.error?.error_cd ||
-                    "",
-
-                error:
-                    responseData?.error ||
-                    responseData ||
-                    null,
+                message: errorMessage,
+                code: responseData?.code || responseData?.error?.error?.error_cd || responseData?.error?.error_cd || "",
+                error: responseData?.error || responseData || null,
             });
         }
     }
@@ -3463,8 +3383,7 @@ export const rejectEWayBill = createAsyncThunk(
 
             if (!normalizedAuthToken) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill access token is required",
+                    message: "E-Way Bill access token is required",
                 });
             }
 
@@ -3473,8 +3392,7 @@ export const rejectEWayBill = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "Reject E-Way Bill payload is required",
+                    message: "Reject E-Way Bill payload is required",
                 });
             }
 
@@ -3489,21 +3407,16 @@ export const rejectEWayBill = createAsyncThunk(
                     params: {
                         action: "REJEWB",
                         aspid: EWB_CREDENTIALS.aspid,
-                        password:
-                            EWB_CREDENTIALS.password,
+                        password: EWB_CREDENTIALS.password,
                         gstin: ewbCredentials.gstin,
-                        username:
-                            ewbCredentials.username,
-                        authtoken:
-                            normalizedAuthToken,
+                        username: ewbCredentials.username,
+                        authtoken: normalizedAuthToken,
                     },
                 }
             );
 
             return (
-                response?.data?.data ||
-                response?.data ||
-                null
+                response?.data?.data || response?.data || null
             );
         } catch (error: any) {
             return rejectWithValue({
@@ -3542,8 +3455,7 @@ export const cancelEWayBill = createAsyncThunk(
 
             if (!normalizedAuthToken) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill access token is required",
+                    message: "E-Way Bill access token is required",
                 });
             }
 
@@ -3552,8 +3464,7 @@ export const cancelEWayBill = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "Cancel E-Way Bill payload is required",
+                    message: "Cancel E-Way Bill payload is required",
                 });
             }
 
@@ -3568,22 +3479,15 @@ export const cancelEWayBill = createAsyncThunk(
                     params: {
                         action: "CANEWB",
                         aspid: EWB_CREDENTIALS.aspid,
-                        password:
-                            EWB_CREDENTIALS.password,
+                        password: EWB_CREDENTIALS.password,
                         gstin: ewbCredentials.gstin,
-                        username:
-                            ewbCredentials.username,
-                        authtoken:
-                            normalizedAuthToken,
+                        username: ewbCredentials.username,
+                        authtoken: normalizedAuthToken,
                     },
                 }
             );
 
-            return (
-                response?.data?.data ||
-                response?.data ||
-                null
-            );
+            return (response?.data?.data || response?.data || null);
         } catch (error: any) {
             return rejectWithValue({
                 message:
@@ -3621,8 +3525,7 @@ export const extendEWayBillValidity = createAsyncThunk(
 
             if (!normalizedAuthToken) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill access token is required",
+                    message: "E-Way Bill access token is required",
                 });
             }
 
@@ -3631,8 +3534,7 @@ export const extendEWayBillValidity = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "Extend validity payload is required",
+                    message: "Extend validity payload is required",
                 });
             }
 
@@ -3647,24 +3549,16 @@ export const extendEWayBillValidity = createAsyncThunk(
                     params: {
                         action: "EXTENDVALIDITY",
                         aspid: EWB_CREDENTIALS.aspid,
-                        password:
-                            EWB_CREDENTIALS.password,
+                        password: EWB_CREDENTIALS.password,
                         gstin: ewbCredentials.gstin,
-                        username:
-                            ewbCredentials.username,
-                        ewbpwd:
-                            ewbCredentials.ewbpwd,
-                        authtoken:
-                            normalizedAuthToken,
+                        username: ewbCredentials.username,
+                        ewbpwd: ewbCredentials.ewbpwd,
+                        authtoken: normalizedAuthToken,
                     },
                 }
             );
 
-            return (
-                response?.data?.data ||
-                response?.data ||
-                null
-            );
+            return (response?.data?.data || response?.data || null);
         } catch (error: any) {
             const responseData =
                 error?.response?.data;
@@ -3682,17 +3576,8 @@ export const extendEWayBillValidity = createAsyncThunk(
 
             return rejectWithValue({
                 message: errorMessage,
-
-                code:
-                    responseData?.code ||
-                    responseData?.error?.error?.error_cd ||
-                    responseData?.error?.error_cd ||
-                    "",
-
-                error:
-                    responseData?.error ||
-                    responseData ||
-                    null,
+                code: responseData?.code || responseData?.error?.error?.error_cd || responseData?.error?.error_cd || "",
+                error: responseData?.error || responseData || null,
             });
         }
     }
@@ -3744,8 +3629,7 @@ export const multiVehicleUpdate = createAsyncThunk(
 
             if (!normalizedAuthToken) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill access token is required",
+                    message: "E-Way Bill access token is required",
                 });
             }
 
@@ -3754,118 +3638,74 @@ export const multiVehicleUpdate = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "Multi Vehicle Update payload is required",
+                    message: "Multi Vehicle Update payload is required",
                 });
             }
 
-            const ewbNo = Number(
-                payload?.ewbNo
-            );
-
-            const groupNo = Number(
-                payload?.groupNo
-            );
-
-            const oldvehicleNo = String(
-                payload?.oldvehicleNo || ""
-            )
-                .trim()
-                .toUpperCase();
-
-            const newVehicleNo = String(
-                payload?.newVehicleNo || ""
-            )
-                .trim()
-                .toUpperCase();
-
-            const oldTranNo = String(
-                payload?.oldTranNo || ""
-            ).trim();
-
-            const newTranNo = String(
-                payload?.newTranNo || ""
-            ).trim();
-
-            const fromPlace = String(
-                payload?.fromPlace || ""
-            ).trim();
-
-            const fromState = Number(
-                payload?.fromState
-            );
-
-            const reasonCode = String(
-                payload?.reasonCode || ""
-            ).trim();
-
-            const reasonRem = String(
-                payload?.reasonRem || ""
-            ).trim();
+            const ewbNo = Number(payload?.ewbNo);
+            const groupNo = Number(payload?.groupNo);
+            const oldvehicleNo = String(payload?.oldvehicleNo || "").trim().toUpperCase();
+            const newVehicleNo = String(payload?.newVehicleNo || "").trim().toUpperCase();
+            const oldTranNo = String(payload?.oldTranNo || "").trim();
+            const newTranNo = String(payload?.newTranNo || "").trim();
+            const fromPlace = String(payload?.fromPlace || "").trim();
+            const fromState = Number(payload?.fromState);
+            const reasonCode = String(payload?.reasonCode || "").trim();
+            const reasonRem = String(payload?.reasonRem || "").trim();
 
             if (!ewbNo) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill number is required",
+                    message: "E-Way Bill number is required",
                 });
             }
 
             if (!groupNo) {
                 return rejectWithValue({
-                    message:
-                        "Multi Vehicle group number is required",
+                    message: "Multi Vehicle group number is required",
                 });
             }
 
             if (!oldvehicleNo) {
                 return rejectWithValue({
-                    message:
-                        "Old vehicle number is required",
+                    message: "Old vehicle number is required",
                 });
             }
 
             if (!newVehicleNo) {
                 return rejectWithValue({
-                    message:
-                        "New vehicle number is required",
+                    message: "New vehicle number is required",
                 });
             }
 
             if (
-                oldvehicleNo ===
-                newVehicleNo
+                oldvehicleNo === newVehicleNo
             ) {
                 return rejectWithValue({
-                    message:
-                        "Old and new vehicle numbers cannot be the same",
+                    message: "Old and new vehicle numbers cannot be the same",
                 });
             }
 
             if (!fromPlace) {
                 return rejectWithValue({
-                    message:
-                        "From place is required",
+                    message: "From place is required",
                 });
             }
 
             if (!fromState) {
                 return rejectWithValue({
-                    message:
-                        "From state code is required",
+                    message: "From state code is required",
                 });
             }
 
             if (!reasonCode) {
                 return rejectWithValue({
-                    message:
-                        "Vehicle update reason is required",
+                    message: "Vehicle update reason is required",
                 });
             }
 
             if (!reasonRem) {
                 return rejectWithValue({
-                    message:
-                        "Vehicle update reason remark is required",
+                    message: "Vehicle update reason remark is required",
                 });
             }
 
@@ -3897,35 +3737,19 @@ export const multiVehicleUpdate = createAsyncThunk(
                     {
                         // ⭐ QUERY PARAMETERS
                         params: {
-                            action:
-                                "MULTIVEHUPD",
-
-                            aspid:
-                                EWB_CREDENTIALS.aspid,
-
-                            password:
-                                EWB_CREDENTIALS.password,
-
-                            gstin:
-                                ewbCredentials.gstin,
-
-                            username:
-                                ewbCredentials.username,
-
-                            authtoken:
-                                normalizedAuthToken,
+                            action: "MULTIVEHUPD",
+                            aspid: EWB_CREDENTIALS.aspid,
+                            password: EWB_CREDENTIALS.password,
+                            gstin: ewbCredentials.gstin,
+                            username: ewbCredentials.username,
+                            authtoken: normalizedAuthToken,
                         },
                     }
                 );
 
-            return (
-                response?.data?.data ||
-                response?.data ||
-                null
-            );
+            return (response?.data?.data || response?.data || null);
         } catch (error: any) {
-            const responseData =
-                error?.response?.data;
+            const responseData = error?.response?.data;
 
             const apiErrorMessage =
                 responseData?.error?.error?.message ||
@@ -3935,27 +3759,18 @@ export const multiVehicleUpdate = createAsyncThunk(
                 responseData?.data?.message ||
                 responseData?.message ||
                 responseData?.errorMessage ||
-                error?.message ||
-                "Failed to update E-Way Bill vehicle";
+                error?.message || "Failed to update E-Way Bill vehicle";
 
             const apiErrorCode =
                 responseData?.error?.error?.error_cd ||
                 responseData?.error?.error_cd ||
                 responseData?.data?.error?.error?.error_cd ||
-                responseData?.code ||
-                "";
+                responseData?.code || "";
 
             return rejectWithValue({
-                message:
-                    apiErrorMessage,
-
-                code:
-                    apiErrorCode,
-
-                error:
-                    responseData?.error ||
-                    responseData ||
-                    null,
+                message: apiErrorMessage,
+                code: apiErrorCode,
+                error: responseData?.error || responseData || null,
             });
         }
     }
@@ -4010,19 +3825,15 @@ export const printDetailEWayBill = createAsyncThunk(
             return response.data;
         } catch (error: any) {
             let errorMessage =
-                error?.message ||
-                "Failed to print detailed E-Way Bill";
+                error?.message || "Failed to print detailed E-Way Bill";
 
-            const responseData =
-                error?.response?.data;
+            const responseData = error?.response?.data;
 
             if (responseData instanceof Blob) {
                 try {
-                    const errorText =
-                        await responseData.text();
+                    const errorText = await responseData.text();
 
-                    const parsedError =
-                        JSON.parse(errorText);
+                    const parsedError = JSON.parse(errorText);
 
                     errorMessage =
                         parsedError?.message ||
@@ -4031,12 +3842,8 @@ export const printDetailEWayBill = createAsyncThunk(
                         errorMessage;
                 } catch {
                     try {
-                        const errorText =
-                            await responseData.text();
-
-                        errorMessage =
-                            errorText ||
-                            errorMessage;
+                        const errorText = await responseData.text();
+                        errorMessage = errorText || errorMessage;
                     } catch {
                         // Keep fallback error.
                     }
@@ -4050,9 +3857,7 @@ export const printDetailEWayBill = createAsyncThunk(
                     errorMessage;
             }
 
-            return rejectWithValue({
-                message: errorMessage,
-            });
+            return rejectWithValue({ message: errorMessage, });
         }
     }
 );
@@ -4082,8 +3887,7 @@ export const saveEWayBillPdf = createAsyncThunk(
                 typeof payload !== "object"
             ) {
                 return rejectWithValue({
-                    message:
-                        "E-Way Bill PDF payload is required",
+                    message: "E-Way Bill PDF payload is required",
                 });
             }
 
@@ -4100,8 +3904,7 @@ export const saveEWayBillPdf = createAsyncThunk(
                 null
             );
         } catch (error: any) {
-            const responseData =
-                error?.response?.data;
+            const responseData = error?.response?.data;
 
             const errorMessage =
                 responseData?.error?.error?.message ||
@@ -4111,22 +3914,12 @@ export const saveEWayBillPdf = createAsyncThunk(
                 responseData?.data?.message ||
                 responseData?.message ||
                 responseData?.errorMessage ||
-                error?.message ||
-                "Failed to save E-Way Bill PDF";
+                error?.message || "Failed to save E-Way Bill PDF";
 
             return rejectWithValue({
                 message: errorMessage,
-
-                code:
-                    responseData?.code ||
-                    responseData?.error?.error?.error_cd ||
-                    responseData?.error?.error_cd ||
-                    "",
-
-                error:
-                    responseData?.error ||
-                    responseData ||
-                    null,
+                code: responseData?.code || responseData?.error?.error?.error_cd || responseData?.error?.error_cd || "",
+                error: responseData?.error || responseData || null,
             });
         }
     }
@@ -4162,25 +3955,14 @@ export const getAllEWayBillPdf = createAsyncThunk(
                             offset,
                             limit,
                             ...(String(search || "").trim()
-                                ? {
-                                    search:
-                                        String(
-                                            search
-                                        ).trim(),
-                                }
-                                : {}),
+                                ? { search: String(search).trim(), } : {}),
                         },
                     }
                 );
 
-            return (
-                response?.data?.data ||
-                response?.data ||
-                null
-            );
+            return (response?.data?.data || response?.data || null);
         } catch (error: any) {
-            const responseData =
-                error?.response?.data;
+            const responseData = error?.response?.data;
 
             const errorMessage =
                 responseData?.error?.error?.message ||
@@ -4202,10 +3984,7 @@ export const getAllEWayBillPdf = createAsyncThunk(
                     responseData?.error?.error_cd ||
                     "",
 
-                error:
-                    responseData?.error ||
-                    responseData ||
-                    null,
+                error: responseData?.error || responseData || null,
             });
         }
     }
@@ -4250,18 +4029,9 @@ export const getEWayBillPdfByNumber = createAsyncThunk(
             return response?.data || null;
         } catch (error: any) {
             return rejectWithValue({
-                message:
-                    error?.response?.data?.message ||
-                    error?.message ||
-                    "E-Way Bill PDF not found",
-
-                code:
-                    error?.response?.data?.code ||
-                    "",
-
-                status:
-                    error?.response?.status ||
-                    0,
+                message: error?.response?.data?.message || error?.message || "E-Way Bill PDF not found",
+                code: error?.response?.data?.code || "",
+                status: error?.response?.status || 0,
             });
         }
     }
@@ -4279,7 +4049,6 @@ const initialState: EWayBillSliceState = {
     eWayBill: [],
     selectedEWayBill: null,
     pagination: null,
-
     listingLoader: false,
     detailLoader: false,
     saveLoader: false,
@@ -4287,7 +4056,6 @@ const initialState: EWayBillSliceState = {
 
     // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN LOADER
     transporterAccessTokenLoader: false,
-
     generateLoader: false,
     rejectLoader: false,
     cancelLoader: false,
@@ -4304,17 +4072,13 @@ const initialState: EWayBillSliceState = {
     pdfSaveLoader: false,
     pdfListingLoader: false,
     pdfDownloadLoader: false,
-
-
     eWayBillPdfRecords: [],
     eWayBillPdfPagination: null,
     selectedEWayBillPdf: null,
-
     accessToken: null,
 
     // ⭐ YELLOW STAR: ADDED — TRANSPORTER ACCESS TOKEN
     transporterAccessToken: null,
-
     generatedEWayBill: null,
 
     // ⭐ YELLOW STAR: ADDED — GST E-WAY BILL DETAILS
@@ -4322,7 +4086,6 @@ const initialState: EWayBillSliceState = {
 
     // ⭐ YELLOW STAR: ADDED — PRINT DETAIL PDF
     printDetailEWayBillPdf: null,
-
     successMessage: null,
     error: null,
 };
@@ -4331,41 +4094,22 @@ const eWayBillSlice = createSlice({
     name: "eWaybill",
     initialState,
     reducers: {
-        clearEWayBillError: (state) => {
-            state.error = null;
-        },
-
-        clearSelectedEWayBill: (state) => {
-            state.selectedEWayBill = null;
-            state.error = null;
-        },
-
-        clearEWayBillSuccessMessage: (state) => {
-            state.successMessage = null;
-        },
-
+        clearEWayBillError: (state) => { state.error = null; },
+        clearSelectedEWayBill: (state) => { state.selectedEWayBill = null; state.error = null; },
+        clearEWayBillSuccessMessage: (state) => { state.successMessage = null; },
         clearEWayBillState: (state) => {
             state.error = null;
             state.successMessage = null;
             state.selectedEWayBill = null;
         },
 
-        clearGeneratedEWayBill: (state) => {
-            state.generatedEWayBill = null;
-            state.accessToken = null;
-        },
+        clearGeneratedEWayBill: (state) => { state.generatedEWayBill = null; state.accessToken = null; },
 
         // ⭐ YELLOW STAR: ADDED — CLEAR GST E-WAY BILL DETAILS
-        clearGstEWayBillDetails: (state) => {
-            state.gstEWayBillDetails = null;
-            state.error = null;
-        },
+        clearGstEWayBillDetails: (state) => { state.gstEWayBillDetails = null; state.error = null; },
 
         // ⭐ YELLOW STAR: ADDED — CLEAR PRINT PDF
-        clearPrintDetailEWayBillPdf: (state) => {
-            state.printDetailEWayBillPdf = null;
-            state.error = null;
-        },
+        clearPrintDetailEWayBillPdf: (state) => { state.printDetailEWayBillPdf = null; state.error = null; },
     },
 
     extraReducers: (builder) => {
@@ -4404,59 +4148,34 @@ const eWayBillSlice = createSlice({
                 (state, action: any) => {
                     state.listingLoader = false;
 
-                    const responseData =
-                        action.payload?.data ??
-                        action.payload ??
-                        [];
+                    const responseData = action.payload?.data ?? action.payload ?? [];
 
-                    const allRecords =
-                        Array.isArray(responseData)
-                            ? responseData
-                            : Array.isArray(responseData?.items)
-                                ? responseData.items
-                                : [];
+                    const allRecords = Array.isArray(responseData)
+                        ? responseData : Array.isArray(responseData?.items)
+                            ? responseData.items : [];
 
-                    const offset =
-                        Number(
-                            action.meta?.arg?.offset || 0
-                        );
-
-                    const limit =
-                        Number(
-                            action.meta?.arg?.limit || 20
-                        );
+                    const offset = Number(action.meta?.arg?.offset || 0);
+                    const limit = Number(action.meta?.arg?.limit || 20);
 
                     // ⭐ YELLOW STAR: LOCAL SEARCH
                     const searchValue =
-                        String(
-                            action.meta?.arg?.search || ""
-                        )
-                            .trim()
-                            .toLowerCase();
+                        String(action.meta?.arg?.search || "").trim().toLowerCase();
 
-                    const searchedRecords =
-                        searchValue
-                            ? allRecords.filter(
-                                (item: any) => {
-                                    return [
-                                        item?.ewbNo,
-                                        item?.docNo,
-                                        item?.genGstin,
-                                        item?.delPlace,
-                                        item?.delPinCode,
-                                        item?.status,
-                                    ].some((value) =>
-                                        String(
-                                            value ?? ""
-                                        )
-                                            .toLowerCase()
-                                            .includes(
-                                                searchValue
-                                            )
-                                    );
-                                }
-                            )
-                            : allRecords;
+                    const searchedRecords = searchValue ? allRecords.filter(
+                        (item: any) => {
+                            return [
+                                item?.ewbNo,
+                                item?.docNo,
+                                item?.genGstin,
+                                item?.delPlace,
+                                item?.delPinCode,
+                                item?.status,
+                            ].some((value) =>
+                                String(value ?? "").toLowerCase().includes(searchValue)
+                            );
+                        }
+                    )
+                        : allRecords;
 
                     // ⭐ YELLOW STAR: LOCAL PAGINATION
                     const records =
