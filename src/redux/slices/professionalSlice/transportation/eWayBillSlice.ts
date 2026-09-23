@@ -2674,7 +2674,7 @@ export const getAllEWayBill = createAsyncThunk(
                 "/eTaxSolnMongoApiBackend/users/eWayBill/getAll",
                 {
                     params: {
-                        
+
                         limit,
                         offset,
                         search,
@@ -2967,9 +2967,16 @@ const getCompanyMasterEWayBillCredentials = async (
         const storedCompany =
             getState()?.professionalCompanyMaster?.company;
 
+        // ⭐ YELLOW STAR: UPDATED — ALWAYS GET LATEST COMPANY MASTER
+        const latestCompany =
+            await dispatch(
+                getCompany(undefined)
+            ).unwrap();
+
+        // ⭐ YELLOW STAR: UPDATED — LATEST FIRST, EXISTING REDUX DATA AS BACKUP
         const company =
-            storedCompany ||
-            await dispatch(getCompany(undefined)).unwrap();
+            latestCompany ||
+            storedCompany;
 
         return {
             gstin:
