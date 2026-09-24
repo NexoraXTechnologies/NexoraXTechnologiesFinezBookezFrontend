@@ -1,2 +1,3 @@
 # FinezBookezFrontend
 Bookez Frontend
+.env
