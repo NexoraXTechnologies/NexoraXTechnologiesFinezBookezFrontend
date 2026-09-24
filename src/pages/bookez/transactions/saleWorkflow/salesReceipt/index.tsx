@@ -713,12 +713,44 @@ const SalesReceipt = () => {
 
             if (key === "amount") {
                 updatedRow.netAmount = value;
-                if (!editingRecord) updatedRow.references = [];
+
+                if (!editingRecord) {
+                    updatedRow.references = [];
+                } else {
+                    // ⭐ UPDATED — KEEP EXISTING NEW REFERENCE SAME AS CURRENT AMOUNT
+                    updatedRow.references = Array.isArray(currentRow?.references)
+                        ? currentRow.references.map((ref: any) => {
+                            if (String(ref?.referenceType || "").toUpperCase() !== "NEW") return ref;
+
+                            return {
+                                ...ref,
+                                billAmount: String(value),
+                                adjustedAmount: String(value),
+                            };
+                        })
+                        : [];
+                }
             }
 
             if (key === "netAmount") {
                 updatedRow.amount = value;
-                if (!editingRecord) updatedRow.references = [];
+
+                if (!editingRecord) {
+                    updatedRow.references = [];
+                } else {
+                    // ⭐ UPDATED — KEEP EXISTING NEW REFERENCE SAME AS CURRENT AMOUNT
+                    updatedRow.references = Array.isArray(currentRow?.references)
+                        ? currentRow.references.map((ref: any) => {
+                            if (String(ref?.referenceType || "").toUpperCase() !== "NEW") return ref;
+
+                            return {
+                                ...ref,
+                                billAmount: String(value),
+                                adjustedAmount: String(value),
+                            };
+                        })
+                        : [];
+                }
             }
 
             updatedRows[index] = updatedRow;
@@ -740,8 +772,10 @@ const SalesReceipt = () => {
         setNewReferenceAmount(clean);
     };
 
-    const handleOpenReferenceModal = async (rowIndex: number) => {
-        const selectedRow = form?.recBody?.[rowIndex];
+    // ⭐ UPDATED — USE CURRENT VISIBLE ROW AMOUNT FOR NEW REFERENCE
+    const handleOpenReferenceModal = async (rowIndex: number, currentRow?: any) => {
+        const selectedRow = currentRow || form?.recBody?.[rowIndex];
+
         if (!selectedRow) {
             toast.error("Receipt row not found");
             return;
@@ -757,25 +791,45 @@ const SalesReceipt = () => {
             return;
         }
 
+        // ⭐ UPDATED — SYNC CURRENT TABLE ROW BEFORE OPENING REFERENCE
+        setForm((prev: any) => {
+            const updatedRows = [...(prev?.recBody || [])];
+
+            updatedRows[rowIndex] = {
+                ...updatedRows[rowIndex],
+                ...selectedRow,
+            };
+
+            return {
+                ...prev,
+                recBody: updatedRows,
+            };
+        });
+
         setSelectedReferenceRowIndex(rowIndex);
         setReferenceError("");
         setReferenceRows([]);
         setShowReferenceModal(true);
 
         const existingReferences = Array.isArray(selectedRow?.references) ? selectedRow.references : [];
-        const existingNewReference = existingReferences.find((ref: any) => String(ref?.referenceType || "").toUpperCase() === "NEW");
 
-        // ⭐ YELLOW STAR: UPDATED — SHOW RECEIPT AMOUNT IN NEW REFERENCE
+        // ⭐ UPDATED — ALWAYS USE CURRENT AMOUNT, NEVER OLD NEW REFERENCE AMOUNT
         const receiptAmount = num(selectedRow?.netAmount || selectedRow?.amount || 0);
-        setNewReferenceAmount(existingNewReference ? String(existingNewReference?.adjustedAmount || "") : String(receiptAmount));
+        setNewReferenceAmount(String(receiptAmount));
 
-        const existingReferenceMap = new Map<string, any>(existingReferences.filter((ref: any) => String(ref?.referenceType || "SINV").toUpperCase() === "SINV" && (ref?.saleInvoice || ref?.salesInvoice)).map((ref: any) => [String(ref.saleInvoice || ref.salesInvoice), ref]));
+        const existingReferenceMap = new Map<string, any>(
+            existingReferences
+                .filter((ref: any) => String(ref?.referenceType || "SINV").toUpperCase() === "SINV" && (ref?.saleInvoice || ref?.salesInvoice))
+                .map((ref: any) => [String(ref.saleInvoice || ref.salesInvoice), ref])
+        );
+
         const refs = await fetchReceiptReferences(selectedRow);
 
         const openRefs = (refs || []).filter((item: any) => {
             const invoiceNo = getReferenceVoucherNumber(item);
             const existingRef = existingReferenceMap.get(String(invoiceNo));
             const remainingAmount = getReferenceRemainingAmount(item) + num(existingRef?.adjustedAmount || 0);
+
             return remainingAmount > 0;
         });
 
@@ -791,7 +845,22 @@ const SalesReceipt = () => {
             const netReturnAmount = getReferenceNetReturnAmount(item);
             const remainingBillAmount = getReferenceRemainingAmount(item);
 
-            return { id: item?._id || Date.now() + Math.random(), referenceType: "SINV", saleInvoice, salesInvoice: saleInvoice, docDate: formatDateForInput(getReferenceDate(item)), billDueDate: formatDateForInput(getReferenceDate(item)), billAmount: String(netBillAmount), netBillAmount: String(netBillAmount), netAmount: String(netBillAmount), netReturnAmount: String(netReturnAmount), remainingBillAmount: String(remainingBillAmount), adjustedAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "", oldAdjustmentAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "0", isSettle: Boolean(existingRef) };
+            return {
+                id: item?._id || Date.now() + Math.random(),
+                referenceType: "SINV",
+                saleInvoice,
+                salesInvoice: saleInvoice,
+                docDate: formatDateForInput(getReferenceDate(item)),
+                billDueDate: formatDateForInput(getReferenceDate(item)),
+                billAmount: String(netBillAmount),
+                netBillAmount: String(netBillAmount),
+                netAmount: String(netBillAmount),
+                netReturnAmount: String(netReturnAmount),
+                remainingBillAmount: String(remainingBillAmount),
+                adjustedAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "",
+                oldAdjustmentAmount: existingRef?.adjustedAmount !== undefined ? String(existingRef.adjustedAmount) : "0",
+                isSettle: Boolean(existingRef),
+            };
         });
 
         setReferenceRows(mappedReferences);
@@ -1458,6 +1527,7 @@ const SalesReceipt = () => {
         fieldsLoading,
         schemaAccountAvailability,
     ]);
+
     const showInitialSkeleton = !refreshing && salesReceipt.length === 0 && (listingLoader || fieldsLoading);
 
     if (showInitialSkeleton) {
