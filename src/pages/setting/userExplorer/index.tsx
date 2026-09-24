@@ -60,8 +60,8 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
     const [selectedStateCities, setSelectedStateCities] = useState<any[]>([]);
     const [selectedMapState, setSelectedMapState] = useState<any>(DEFAULT_MAP_STATE);
     // ⭐ UPDATED
-    const [selectedMapShg, setSelectedMapShg] = useState<any>(null);
-    const [selectedMapCmrc, setSelectedMapCmrc] = useState<any>(null);
+    // const [selectedMapShg, setSelectedMapShg] = useState<any>(null);
+    // const [selectedMapCmrc, setSelectedMapCmrc] = useState<any>(null);
     const [mapCityData, setMapCityData] = useState<any[]>([]);
     const [mapLoading, setMapLoading] = useState(false);
     const [mapGeoJson, setMapGeoJson] = useState<any>(null);
@@ -717,20 +717,20 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             value: item?.name?.en || item?.value || item?.city || ""
         }))
         : [];
-    const shgOptions = [
-        { label: "Sakhi Mahila SHG", value: "SHG-001" },
-        { label: "Pragati Mahila SHG", value: "SHG-002" },
-        { label: "Ujjwala Mahila SHG", value: "SHG-003" },
-        { label: "Savitribai Mahila SHG", value: "SHG-004" },
-        { label: "Asha Mahila SHG", value: "SHG-005" },
-    ];
-    const cmrcOptions = [
-        { label: "Nagpur CMRC", value: "CMRC-001" },
-        { label: "Hingna CMRC", value: "CMRC-002" },
-        { label: "Kamptee CMRC", value: "CMRC-003" },
-        { label: "Umred CMRC", value: "CMRC-004" },
-        { label: "Saoner CMRC", value: "CMRC-005" },
-    ];
+    // const shgOptions = [
+    //     { label: "Sakhi Mahila SHG", value: "SHG-001" },
+    //     { label: "Pragati Mahila SHG", value: "SHG-002" },
+    //     { label: "Ujjwala Mahila SHG", value: "SHG-003" },
+    //     { label: "Savitribai Mahila SHG", value: "SHG-004" },
+    //     { label: "Asha Mahila SHG", value: "SHG-005" },
+    // ];
+    // const cmrcOptions = [
+    //     { label: "Nagpur CMRC", value: "CMRC-001" },
+    //     { label: "Hingna CMRC", value: "CMRC-002" },
+    //     { label: "Kamptee CMRC", value: "CMRC-003" },
+    //     { label: "Umred CMRC", value: "CMRC-004" },
+    //     { label: "Saoner CMRC", value: "CMRC-005" },
+    // ];
     const periodOptions = [
         { label: "Today", value: "today" },
         { label: "Yesterday", value: "yesterday" },
@@ -1603,18 +1603,15 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.dbNumbers} onChange={(value: any) => handleDashboardFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
-                        {/* ⭐ UPDATED */}
-                        <div className="flex flex-col gap-1">
+                        {/* <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-card-foreground">SHG</label>
-                            {/* ⭐ UPDATED */}
                             <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.shg} onChange={(value: any) => handleDashboardFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-card-foreground">CMRC</label>
-                            {/* ⭐ UPDATED */}
                             <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={dashboardFilters.cmrc} onChange={(value: any) => handleDashboardFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
-                        </div>
+                        </div> */}
 
                         <SelectInput label="Period" value={dashboardFilters.period} placeholder="Select Period" onChange={(e: any) => handleDashboardFilterChange("period", e?.target?.value)} options={periodOptions} />
                     </div>
@@ -2088,17 +2085,15 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <Select isMulti classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.dbNumbers} onChange={(value: any) => handleBusinessOperationsFilterChange("dbNumbers", value || [])} options={uniqueDbNumberOptions} placeholder="Select DB Numbers" styles={reactSelectStyles} closeMenuOnSelect={false} menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
-                        <div className="flex flex-col gap-1">
+                        {/* <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-card-foreground">SHG</label>
-                            {/* ⭐ UPDATED */}
                             <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.shg} onChange={(value: any) => handleBusinessOperationsFilterChange("shg", value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-sm font-medium text-card-foreground">CMRC</label>
-                            {/* ⭐ UPDATED */}
                             <Select classNamePrefix="dashboard-select" isDisabled={disabled} value={businessOperationsFilters.cmrc} onChange={(value: any) => handleBusinessOperationsFilterChange("cmrc", value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
-                        </div>
+                        </div> */}
 
                         <SelectInput label="Period" value={businessOperationsFilters.period} placeholder="Select Period" onChange={(e: any) => handleBusinessOperationsFilterChange("period", e?.target?.value)} options={periodOptions} />
                     </div>
@@ -2187,21 +2182,17 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
                             <label className="mb-1 block text-sm font-medium text-card-foreground">State</label>
                             <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapState} onChange={handleMapStateChange} options={stateOptions} placeholder="Select State" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
 
-                            {/* ⭐ UPDATED */}
-                            <div className="mt-3">
+                            {/* <div className="mt-3">
                                 <label className="mb-1 block text-sm font-medium text-card-foreground">SHG</label>
-                                {/* ⭐ UPDATED */}
                                 <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapShg} onChange={(value: any) => setSelectedMapShg(value || null)} options={shgOptions} placeholder="Select SHG" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
                             </div>
 
                             <div className="mt-3">
                                 <label className="mb-1 block text-sm font-medium text-card-foreground">CMRC</label>
-                                {/* ⭐ UPDATED */}
                                 <Select classNamePrefix="dashboard-select" isDisabled={mapLoading} value={selectedMapCmrc} onChange={(value: any) => setSelectedMapCmrc(value || null)} options={cmrcOptions} placeholder="Select CMRC" styles={reactSelectStyles} isClearable menuPortalTarget={document.body} menuPosition="fixed" />
-                            </div>
+                            </div> */}
                         </div>
                         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3">
-
                             <div>
                                 <h3 className="text-sm font-black text-card-foreground">City / District Values</h3>
                                 <p className="text-[11px] font-medium text-muted-foreground">{mapDistrictList.length} cities / districts with data</p>
