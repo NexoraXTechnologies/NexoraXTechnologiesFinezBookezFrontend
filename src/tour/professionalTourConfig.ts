@@ -390,270 +390,270 @@ export const professionalTourConfig: any = {
     },
   ],
   "/professional/incometax/addtaxpayer": [
-  {
-    selector: "#taxpayer-total-box",
-    title: "Total Taxpayers",
-    description:
-      "This box displays the total number of taxpayers fetched from the database.",
-    position: "bottom",
-  },
-  {
-    selector: "#taxpayer-toggle-inactive",
-    title: "Active / Inactive Filter",
-    description:
-      "Click to switch between viewing Active and Inactive taxpayers.",
-    position: "bottom",
-  },
-  {
-    selector: "#taxpayer-search-input",
-    title: "Search Taxpayers",
-    description:
-      "Search taxpayers by mobile number, email, or PAN. The list updates automatically.",
-    position: "left",
-  },
-  {
-    selector: "#taxpayer-refresh-button",
-    title: "Refresh Taxpayer List",
-    description:
-      "Reload the list to see latest updates without changing filters.",
-    position: "left",
-  },
-  {
-    selector: "#taxpayer-add-button",
-    title: "Add a Taxpayer",
-    description:
-      "Click here to open options for adding single, multiple, or existing taxpayers.",
-    position: "left",
-  },
-  {
-    selector: "#taxpayer-table",
-    title: "Taxpayer List",
-    description:
-      "This table shows all taxpayers with PAN, Mobile, Email, and Name.",
-    position: "top",
-  },
-  {
-    selector: ".taxpayer-status-toggle",
-    title: "Activate / Deactivate",
-    description:
-      "Use this switch to activate or deactivate the selected taxpayer.",
-    position: "left",
-  },
-  {
-    selector: ".taxpayer-view-btn",
-    title: "View Details",
-    description:
-      "Click to view full taxpayer details including personal information.",
-    position: "left",
-  },
-  {
-    selector: ".taxpayer-edit-btn",
-    title: "Edit Taxpayer",
-    description:
-      "Click to open the edit form and modify taxpayer details.",
-    position: "left",
-  },
-  {
-    selector: "#taxpayer-pagination",
-    title: "Pagination Controls",
-    description:
-      "Use these buttons to navigate through the taxpayer list.",
-    position: "top",
-  }
-],
-"/professional/incometax/form26as": [
-  {
-    selector: "#form26as-title",
-    title: "Form 26AS Dashboard",
-    description:
-      "This section displays Form 26AS data including TDS, TCS, Part-wise details, and uploaded statements.",
-    position: "bottom",
-  },
-  {
-    selector: "#form26as-fy-buttons",
-    title: "Financial Year Selection",
-    description:
-      "Select a financial year to load Form 26AS for the chosen taxpayer.",
-    position: "bottom",
-  },
-  {
-    selector: "#form26as-pan-select",
-    title: "Choose a Taxpayer PAN",
-    description:
-      "Select a taxpayer PAN to load previously synced Form 26AS or upload a new one.",
-    position: "right",
-  },
-  {
-    selector: "#form26as-upload-btn",
-    title: "Upload 26AS PDF / ZIP",
-    description:
-      "Upload the Form 26AS file downloaded from the TRACES portal (PDF or ZIP). The system extracts and processes it automatically.",
-    position: "left",
-  },
-  {
-    selector: "#form26as-sync-btn",
-    title: "Sync Latest Data",
-    description:
-      "Fetch the latest saved Form 26AS data from the backend for the selected PAN & FY.",
-    position: "left",
-  },
-  {
-    selector: "#form26as-summary-cards",
-    title: "TDS & TCS Summary",
-    description:
-      "A quick overview showing total TDS/TCS credited, deducted, and deposited for the selected financial year.",
-    position: "top",
-  },
-  {
-    selector: "#form26as-part-tabs",
-    title: "Part-wise Navigation",
-    description:
-      "Switch between PART-I to PART-X to view deductor details, salary information, TDS, TCS, tax payments, etc.",
-    position: "top",
-  },
-  {
-    selector: "#form26as-active-part-container",
-    title: "Part Details",
-    description:
-      "Each part contains tables showing deductor summaries, transaction details, and tax entries as reported in Form 26AS.",
-    position: "top",
-  },
-  {
-    selector: ".form26as-entry-card",
-    title: "Expandable Tables",
-    description:
-      "Click a card to expand and view detailed rows of information such as TAN, deducted amount, section, dates, and more.",
-    position: "bottom",
-  }
-],
-"/professional/incometax/ais": [
-  {
-    selector: "#ais-title",
-    title: "Annual Information Statement",
-    description:
-      "This dashboard allows you to upload, sync, and analyze AIS data for any taxpayer.",
-    position: "bottom"
-  },
-  {
-    selector: "#ais-fy-selector",
-    title: "Select Financial Year",
-    description:
-      "Choose a financial year to load or sync AIS data for the selected taxpayer.",
-    position: "bottom"
-  },
-  {
-    selector: "#ais-pan-select",
-    title: "Select Taxpayer PAN",
-    description:
-      "Choose a taxpayer PAN to view or upload AIS details. Their DOB is used to unlock AIS files.",
-    position: "right"
-  },
-  {
-    selector: "#ais-upload-btn",
-    title: "Upload AIS PDF",
-    description:
-      "Upload the AIS PDF downloaded from the Income Tax portal. The system decrypts and processes it automatically.",
-    position: "left"
-  },
-  {
-    selector: "#ais-sync-btn",
-    title: "Sync Latest AIS Data",
-    description:
-      "Load previously saved AIS data from the backend for this PAN and financial year.",
-    position: "left"
-  },
-  {
-    selector: "#ais-summary-cards",
-    title: "AIS Summary Overview",
-    description:
-      "This section shows total values for TDS/TCS, SFT information, tax payments, and demand/refund.",
-    position: "top"
-  },
-  {
-    selector: "#ais-tabs",
-    title: "Category Tabs",
-    description:
-      "Switch between AIS sections such as TDS/TCS, SFT Information, Tax Payments, and Demand/Refund.",
-    position: "top"
-  },
-  {
-    selector: "#ais-item-list",
-    title: "AIS Detailed Entries",
-    description:
-      "Each card contains summary information and expandable transaction details for the selected AIS category.",
-    position: "top"
-  },
-  {
-    selector: ".ais-entry-card",
-    title: "Expandable Entry Card",
-    description:
-      "Click any card to expand and view detailed transaction rows such as quarters, TAN, amount deducted, and more.",
-    position: "bottom"
-  }
-],
-"/professional/incometax/tis": [
-  {
-    selector: "#tis-title",
-    title: "Taxpayer Information Summary (TIS)",
-    description:
-      "This dashboard summarizes the taxpayer’s income categories, processed values, and accepted values.",
-    position: "bottom"
-  },
-  {
-    selector: "#tis-fy-selector",
-    title: "Select Financial Year",
-    description:
-      "Choose the financial year to view or sync TIS data for the selected taxpayer.",
-    position: "bottom"
-  },
-  {
-    selector: "#tis-pan-select",
-    title: "Select PAN",
-    description:
-      "Select the taxpayer PAN whose TIS details you want to view, sync, or upload.",
-    position: "right"
-  },
-  {
-    selector: "#tis-upload-btn",
-    title: "Upload TIS PDF",
-    description:
-      "Upload the TIS PDF downloaded from the Income Tax portal. The file is decrypted automatically and processed.",
-    position: "left"
-  },
-  {
-    selector: "#tis-sync-btn",
-    title: "Sync Latest TIS Data",
-    description:
-      "Fetch previously saved TIS data from the backend for this PAN and FY.",
-    position: "left"
-  },
-  {
-    selector: "#tis-summary-cards",
-    title: "TIS Income Category Summary",
-    description:
-      "These cards show the total processed and accepted amounts for each income category such as Salary, Business, Capital Gain, etc.",
-    position: "top"
-  },
-  {
-    selector: "#tis-tabs",
-    title: "Category Tabs",
-    description:
-      "Switch between income categories (Salary, Business, Other Source, Capital Gain, Taxes Paid, SFT).",
-    position: "top"
-  },
-  {
-    selector: "#tis-item-list",
-    title: "Category Details",
-    description:
-      "Detailed entries for each TIS category appear here. Each entry shows processed, reported, and derived (accepted) values.",
-    position: "top"
-  },
-  {
-    selector: ".tis-entry-card",
-    title: "TIS Entry Card",
-    description:
-      "Each card represents a summarized item. View category-wise reported, processed, and derived values.",
-    position: "bottom"
-  }
-],
+    {
+      selector: "#taxpayer-total-box",
+      title: "Total Taxpayers",
+      description:
+        "This box displays the total number of taxpayers fetched from the database.",
+      position: "bottom",
+    },
+    {
+      selector: "#taxpayer-toggle-inactive",
+      title: "Active / Inactive Filter",
+      description:
+        "Click to switch between viewing Active and Inactive taxpayers.",
+      position: "bottom",
+    },
+    {
+      selector: "#taxpayer-search-input",
+      title: "Search Taxpayers",
+      description:
+        "Search taxpayers by mobile number, email, or PAN. The list updates automatically.",
+      position: "left",
+    },
+    {
+      selector: "#taxpayer-refresh-button",
+      title: "Refresh Taxpayer List",
+      description:
+        "Reload the list to see latest updates without changing filters.",
+      position: "left",
+    },
+    {
+      selector: "#taxpayer-add-button",
+      title: "Add a Taxpayer",
+      description:
+        "Click here to open options for adding single, multiple, or existing taxpayers.",
+      position: "left",
+    },
+    {
+      selector: "#taxpayer-table",
+      title: "Taxpayer List",
+      description:
+        "This table shows all taxpayers with PAN, Mobile, Email, and Name.",
+      position: "top",
+    },
+    {
+      selector: ".taxpayer-status-toggle",
+      title: "Activate / Deactivate",
+      description:
+        "Use this switch to activate or deactivate the selected taxpayer.",
+      position: "left",
+    },
+    {
+      selector: ".taxpayer-view-btn",
+      title: "View Details",
+      description:
+        "Click to view full taxpayer details including personal information.",
+      position: "left",
+    },
+    {
+      selector: ".taxpayer-edit-btn",
+      title: "Edit Taxpayer",
+      description:
+        "Click to open the edit form and modify taxpayer details.",
+      position: "left",
+    },
+    {
+      selector: "#taxpayer-pagination",
+      title: "Pagination Controls",
+      description:
+        "Use these buttons to navigate through the taxpayer list.",
+      position: "top",
+    }
+  ],
+  "/professional/incometax/form26as": [
+    {
+      selector: "#form26as-title",
+      title: "Form 26AS Dashboard",
+      description:
+        "This section displays Form 26AS data including TDS, TCS, Part-wise details, and uploaded statements.",
+      position: "bottom",
+    },
+    {
+      selector: "#form26as-fy-buttons",
+      title: "Financial Year Selection",
+      description:
+        "Select a financial year to load Form 26AS for the chosen taxpayer.",
+      position: "bottom",
+    },
+    {
+      selector: "#form26as-pan-select",
+      title: "Choose a Taxpayer PAN",
+      description:
+        "Select a taxpayer PAN to load previously synced Form 26AS or upload a new one.",
+      position: "right",
+    },
+    {
+      selector: "#form26as-upload-btn",
+      title: "Upload 26AS PDF / ZIP",
+      description:
+        "Upload the Form 26AS file downloaded from the TRACES portal (PDF or ZIP). The system extracts and processes it automatically.",
+      position: "left",
+    },
+    {
+      selector: "#form26as-sync-btn",
+      title: "Sync Latest Data",
+      description:
+        "Fetch the latest saved Form 26AS data from the backend for the selected PAN & FY.",
+      position: "left",
+    },
+    {
+      selector: "#form26as-summary-cards",
+      title: "TDS & TCS Summary",
+      description:
+        "A quick overview showing total TDS/TCS credited, deducted, and deposited for the selected financial year.",
+      position: "top",
+    },
+    {
+      selector: "#form26as-part-tabs",
+      title: "Part-wise Navigation",
+      description:
+        "Switch between PART-I to PART-X to view deductor details, salary information, TDS, TCS, tax payments, etc.",
+      position: "top",
+    },
+    {
+      selector: "#form26as-active-part-container",
+      title: "Part Details",
+      description:
+        "Each part contains tables showing deductor summaries, transaction details, and tax entries as reported in Form 26AS.",
+      position: "top",
+    },
+    {
+      selector: ".form26as-entry-card",
+      title: "Expandable Tables",
+      description:
+        "Click a card to expand and view detailed rows of information such as TAN, deducted amount, section, dates, and more.",
+      position: "bottom",
+    }
+  ],
+  "/professional/incometax/ais": [
+    {
+      selector: "#ais-title",
+      title: "Annual Information Statement",
+      description:
+        "This dashboard allows you to upload, sync, and analyze AIS data for any taxpayer.",
+      position: "bottom"
+    },
+    {
+      selector: "#ais-fy-selector",
+      title: "Select Financial Year",
+      description:
+        "Choose a financial year to load or sync AIS data for the selected taxpayer.",
+      position: "bottom"
+    },
+    {
+      selector: "#ais-pan-select",
+      title: "Select Taxpayer PAN",
+      description:
+        "Choose a taxpayer PAN to view or upload AIS details. Their DOB is used to unlock AIS files.",
+      position: "right"
+    },
+    {
+      selector: "#ais-upload-btn",
+      title: "Upload AIS PDF",
+      description:
+        "Upload the AIS PDF downloaded from the Income Tax portal. The system decrypts and processes it automatically.",
+      position: "left"
+    },
+    {
+      selector: "#ais-sync-btn",
+      title: "Sync Latest AIS Data",
+      description:
+        "Load previously saved AIS data from the backend for this PAN and financial year.",
+      position: "left"
+    },
+    {
+      selector: "#ais-summary-cards",
+      title: "AIS Summary Overview",
+      description:
+        "This section shows total values for TDS/TCS, SFT information, tax payments, and demand/refund.",
+      position: "top"
+    },
+    {
+      selector: "#ais-tabs",
+      title: "Category Tabs",
+      description:
+        "Switch between AIS sections such as TDS/TCS, SFT Information, Tax Payments, and Demand/Refund.",
+      position: "top"
+    },
+    {
+      selector: "#ais-item-list",
+      title: "AIS Detailed Entries",
+      description:
+        "Each card contains summary information and expandable transaction details for the selected AIS category.",
+      position: "top"
+    },
+    {
+      selector: ".ais-entry-card",
+      title: "Expandable Entry Card",
+      description:
+        "Click any card to expand and view detailed transaction rows such as quarters, TAN, amount deducted, and more.",
+      position: "bottom"
+    }
+  ],
+  "/professional/incometax/tis": [
+    {
+      selector: "#tis-title",
+      title: "Taxpayer Information Summary (TIS)",
+      description:
+        "This dashboard summarizes the taxpayer’s income categories, processed values, and accepted values.",
+      position: "bottom"
+    },
+    {
+      selector: "#tis-fy-selector",
+      title: "Select Financial Year",
+      description:
+        "Choose the financial year to view or sync TIS data for the selected taxpayer.",
+      position: "bottom"
+    },
+    {
+      selector: "#tis-pan-select",
+      title: "Select PAN",
+      description:
+        "Select the taxpayer PAN whose TIS details you want to view, sync, or upload.",
+      position: "right"
+    },
+    {
+      selector: "#tis-upload-btn",
+      title: "Upload TIS PDF",
+      description:
+        "Upload the TIS PDF downloaded from the Income Tax portal. The file is decrypted automatically and processed.",
+      position: "left"
+    },
+    {
+      selector: "#tis-sync-btn",
+      title: "Sync Latest TIS Data",
+      description:
+        "Fetch previously saved TIS data from the backend for this PAN and FY.",
+      position: "left"
+    },
+    {
+      selector: "#tis-summary-cards",
+      title: "TIS Income Category Summary",
+      description:
+        "These cards show the total processed and accepted amounts for each income category such as Salary, Business, Capital Gain, etc.",
+      position: "top"
+    },
+    {
+      selector: "#tis-tabs",
+      title: "Category Tabs",
+      description:
+        "Switch between income categories (Salary, Business, Other Source, Capital Gain, Taxes Paid, SFT).",
+      position: "top"
+    },
+    {
+      selector: "#tis-item-list",
+      title: "Category Details",
+      description:
+        "Detailed entries for each TIS category appear here. Each entry shows processed, reported, and derived (accepted) values.",
+      position: "top"
+    },
+    {
+      selector: ".tis-entry-card",
+      title: "TIS Entry Card",
+      description:
+        "Each card represents a summarized item. View category-wise reported, processed, and derived values.",
+      position: "bottom"
+    }
+  ],
 };
