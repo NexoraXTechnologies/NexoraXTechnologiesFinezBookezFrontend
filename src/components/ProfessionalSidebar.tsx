@@ -499,8 +499,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 					onClick={handleClick}
 					style={{ paddingLeft: `${20 + level * 14}px` }}
 					className={`flex items-center cursor-pointer py-3 px-2 mx-2 mb-1 rounded transition-all duration-200 select-none group ${isActive || isParentActive
-							? "bg-primary/10 text-primary"
-							: "text-muted-foreground hover:bg-muted hover:text-primary"
+						? "bg-primary/10 text-primary"
+						: "text-muted-foreground hover:bg-muted hover:text-primary"
 						}`}
 				>
 					{/* ICON */}
@@ -555,9 +555,20 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 		return sidebarContent;
 	};
 
+	// useEffect(() => {
+	// 	if (onMenuItemsChange) onMenuItemsChange(menuItems);
+	// }, []);
+
+	// ⭐ UPDATED - Refresh parent menu items when dynamic modules/configuration changes
 	useEffect(() => {
 		if (onMenuItemsChange) onMenuItemsChange(menuItems);
-	}, []);
+	}, [
+		enableTransport,
+		enableEngineering,
+		enablePOS,
+		enableQrBarcode,
+		isBookEZEnabled,
+	]);
 
 	return (
 		<div
@@ -575,8 +586,8 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 			<div className="flex items-center justify-between h-16 px-3">
 				<h1
 					className={`font-bold text-xl bg-background border border-border flex items-center justify-center overflow-hidden ${isExpanded
-							? "w-full rounded-xl px-3 py-1"
-							: "w-12 h-12 rounded-full p-2"
+						? "w-full rounded-xl px-3 py-1"
+						: "w-12 h-12 rounded-full p-2"
 						}`}
 				>
 					<span className="lg:hidden flex items-center justify-center w-full">

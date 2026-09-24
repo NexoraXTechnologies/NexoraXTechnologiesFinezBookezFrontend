@@ -378,7 +378,7 @@ const VehicleCard = ({ vehicle }: { vehicle: any }) => {
                     <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                             <h3 className="truncate text-sm font-bold text-card-foreground">
-                            {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.vehicleCode || vehicle.code || "-"}
+                                {vehicle.name || vehicle.rawRecord?.name || "-"} - {vehicle.vehicleNumber || vehicle.vehicleCode || vehicle.code || "-"}
                             </h3>
 
                             <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -418,7 +418,7 @@ const VehicleCard = ({ vehicle }: { vehicle: any }) => {
                             value={`${vehicle.vehicleCapacityTon || 0} Ton`}
                         />
 
-                    
+
 
                         <CompactInfoTile
                             label="Location"
@@ -450,7 +450,7 @@ const SkeletonCard = ({ index }: { index: number }) => {
         <motion.div
             variants={cardVariants}
             custom={index}
-            className="h-[175px] overflow-hidden rounded-md border border-border bg-card p-3 shadow-sm"
+            className="min-h-[190px] overflow-hidden rounded-md border border-border bg-card p-3 shadow-sm"
         >
             <motion.div
                 className="h-full w-full"
@@ -668,7 +668,7 @@ const VehicleStatus = () => {
             animate="show"
             className="min-h-screen bg-background p-3"
         >
-           <div className="sticky top-0 z-40 mx-auto flex w-full flex-col gap-3  bg-background/95 py-3  backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <div className="sticky top-0 z-40 mx-auto flex w-full flex-col gap-3  bg-background/95 py-3  backdrop-blur supports-[backdrop-filter]:bg-background/80">
                 {/* ACTION BAR */}
                 <motion.div variants={sectionVariants} className="flex flex-col gap-3 rounded-md border border-border bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-center">
