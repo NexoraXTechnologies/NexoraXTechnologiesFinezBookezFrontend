@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import "react-toastify/dist/ReactToastify.css";
+import Select from "react-select"; // ⭐ UPDATED
 
 import {
   checkProfessionalParentUser,
@@ -30,6 +31,10 @@ import {
   seedDefaultAccounts,
   seedDefaultUnits,
 } from "../redux/slices/professionalSlice/seeder";
+import {
+  getCitiesByState,
+  getStates,
+} from "../redux/slices/professionalSlice/stateCitySlice"; // ⭐ UPDATED
 
 type RegistrationRole = "Parent" | "Child";
 
@@ -41,12 +46,45 @@ const labelClassName =
 
 const errorClassName = "mt-0.5 text-xs font-medium text-destructive";
 
+// ⭐ UPDATED
+const selectThemeStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    minHeight: "36px",
+    height: "36px",
+    backgroundColor: "var(--background)",
+    borderColor: state.isFocused ? "var(--primary)" : "var(--border)",
+    boxShadow: state.isFocused ? "0 0 0 1px var(--primary)" : "none",
+    "&:hover": { borderColor: "var(--primary)" },
+  }),
+  valueContainer: (base: any) => ({ ...base, height: "34px", padding: "0 10px" }),
+  indicatorsContainer: (base: any) => ({ ...base, height: "34px" }),
+  menu: (base: any) => ({ ...base, zIndex: 9999, backgroundColor: "var(--card)", border: "1px solid var(--border)" }),
+  menuPortal: (base: any) => ({ ...base, zIndex: 99999 }),
+  menuList: (base: any) => ({ ...base, backgroundColor: "var(--card)", padding: "4px" }),
+  option: (base: any, state: any) => ({
+    ...base,
+    cursor: "pointer",
+    backgroundColor: state.isSelected ? "var(--primary)" : state.isFocused ? "var(--muted)" : "var(--card)",
+    color: state.isSelected ? "var(--primary-foreground)" : "var(--card-foreground)",
+    "&:active": { backgroundColor: "var(--muted)" },
+  }),
+  singleValue: (base: any) => ({ ...base, color: "var(--foreground)" }),
+  input: (base: any) => ({ ...base, color: "var(--foreground)" }),
+  placeholder: (base: any) => ({ ...base, color: "var(--muted-foreground)" }),
+};
+
 const ProfessionalRegister = () => {
   const { parentUserData, loading } = useSelector(
     (state: any) => state.professionalAuth,
   );
   const { loading: panLoading } = useSelector(
     (state: any) => state?.verifyPan,
+  );
+
+  // ⭐ UPDATED
+  const { states = [], cities = [], loading: stateCityLoading } = useSelector(
+    (state: any) => state.stateCity || {},
   );
 
   const dispatch = useDispatch();
@@ -61,6 +99,7 @@ const ProfessionalRegister = () => {
 
   const {
     register,
+    control, // ⭐ UPDATED
     handleSubmit,
     setValue,
     watch,
@@ -74,6 +113,78 @@ const ProfessionalRegister = () => {
   )
     .toISOString()
     .split("T")[0];
+
+  // ⭐ UPDATED
+  const selectedState = watch("state");
+
+  // ⭐ UPDATED
+  const getDisplayName = (name: any) => {
+    if (!name) return "";
+    if (typeof name === "string") return name;
+    if (typeof name === "object") {
+      return (
+        name.en ||
+        name.mr ||
+        name.hi ||
+        name.gu ||
+        name.ta ||
+        name.te ||
+        name.kn ||
+        name.ml ||
+        name.pa ||
+        ""
+      );
+    }
+
+    return String(name);
+  };
+
+  // ⭐ UPDATED
+  const getStateCode = (state: any) =>
+    state?.isoCode ||
+    state?.stateCode ||
+    state?.code ||
+    "";
+
+  // ⭐ UPDATED
+  const getCityName = (city: any) =>
+    getDisplayName(
+      city?.name ||
+      city?.cityName,
+    );
+
+  // ⭐ UPDATED — VALUE CONTAINS COMPLETE STATE OBJECT
+  const stateOptions = (states || []).map((item: any) => ({
+    value: item,
+    label: getDisplayName(item?.name || item?.stateName) || getStateCode(item),
+  }));
+
+  // ⭐ UPDATED — VALUE CONTAINS COMPLETE CITY OBJECT
+  const cityOptions = (cities || []).map((item: any) => ({
+    value: item,
+    label: getCityName(item),
+  }));
+
+  // ⭐ UPDATED
+  const selectedStateCode = getStateCode(selectedState);
+
+  // ⭐ UPDATED
+  useEffect(() => {
+    // @ts-ignore
+    dispatch(getStates() as any);
+  }, [dispatch]);
+
+  // ⭐ UPDATED
+  useEffect(() => {
+    if (!selectedStateCode) return;
+
+    dispatch(
+      getCitiesByState({
+        stateCode: selectedStateCode,
+        searchText: "",
+      }) as any
+    );
+  }, [dispatch, selectedStateCode]);
 
   const handlePanChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const upperCasePan = event.target.value.toUpperCase();
@@ -176,6 +287,7 @@ const ProfessionalRegister = () => {
       data.userPAN = data.userPAN.toUpperCase();
       data.userMobileNumberHash = data.userMobileNumberHash.toString();
 
+      // ⭐ UPDATED — state AND city ALREADY CONTAIN COMPLETE OBJECTS
       const payload = { ...data };
 
       if (role === "Parent") {
@@ -453,6 +565,77 @@ const ProfessionalRegister = () => {
                     </p>
                   )}
                 </div>
+
+                {/* ⭐ UPDATED */}
+                <div>
+                  <label className={labelClassName}>State</label>
+                  <Controller
+                    name="state"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        options={stateOptions}
+                        value={
+                          stateOptions.find(
+                            (item: any) =>
+                              getStateCode(item.value) ===
+                              getStateCode(field.value),
+                          ) || null
+                        }
+                        onChange={(option: any) => {
+                          field.onChange(option?.value || null);
+                          setValue("city", null);
+                        }}
+                        placeholder="Select state"
+                        isSearchable
+                        isClearable
+                        styles={selectThemeStyles}
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
+                        noOptionsMessage={() => "No states found"}
+                      />
+                    )}
+                  />
+                </div>
+
+                {/* ⭐ UPDATED */}
+                <div>
+                  <label className={labelClassName}>City</label>
+                  <Controller
+                    name="city"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        options={cityOptions}
+                        value={
+                          cityOptions.find(
+                            (item: any) =>
+                              getCityName(item.value) ===
+                              getCityName(field.value),
+                          ) || null
+                        }
+                        onChange={(option: any) =>
+                          field.onChange(option?.value || null)
+                        }
+                        placeholder={
+                          !selectedStateCode
+                            ? "Select state first"
+                            : stateCityLoading
+                              ? "Loading cities..."
+                              : "Select city"
+                        }
+                        isSearchable
+                        isClearable
+                        isDisabled={!selectedStateCode || stateCityLoading}
+                        isLoading={stateCityLoading && !!selectedStateCode}
+                        styles={selectThemeStyles}
+                        menuPortalTarget={document.body}
+                        menuPosition="fixed"
+                        noOptionsMessage={() => "No cities found"}
+                      />
+                    )}
+                  />
+                </div>
               </div>
             </section>
 
@@ -621,8 +804,8 @@ const ProfessionalRegister = () => {
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <label
                       className={`relative cursor-pointer rounded-lg border p-3 transition ${role === "Parent"
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
-                          : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
                         }`}
                     >
                       <input
@@ -635,8 +818,8 @@ const ProfessionalRegister = () => {
                       <div className="flex items-start gap-2.5">
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${role === "Parent"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
                             }`}
                         >
                           <Building2 size={16} />
@@ -654,8 +837,8 @@ const ProfessionalRegister = () => {
 
                     <label
                       className={`relative cursor-pointer rounded-lg border p-3 transition ${role === "Child"
-                          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
-                          : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/50"
                         }`}
                     >
                       <input
@@ -668,8 +851,8 @@ const ProfessionalRegister = () => {
                       <div className="flex items-start gap-2.5">
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${role === "Child"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
                             }`}
                         >
                           <UsersRound size={16} />

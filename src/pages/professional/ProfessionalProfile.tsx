@@ -14,6 +14,8 @@ import {
 import { toast } from "react-toastify";
 
 import { getProfessionalProfile, updateProfessionalProfile } from "../../redux/slices/professionalSlice/professionalProfileSlice";
+// ⭐ UPDATED
+import { getCitiesByState, getStates } from "../../redux/slices/professionalSlice/stateCitySlice";
 import { formatToInputDate } from "../../components/common/DateFormator";
 import { SelectInput, TextInput } from "../../components/inputs";
 
@@ -29,6 +31,9 @@ type ProfileFormValues = {
   userType: string;
   userGender: string;
   businessType: string;
+  // ⭐ UPDATED
+  state: string;
+  city: string;
   isUserActive: string;
   parentUserMobileNumber: string;
 };
@@ -76,6 +81,9 @@ const ProfessionalProfile = () => {
     (state: any) => state.professionalProfile
   );
 
+  // ⭐ UPDATED
+  const { states = [], cities = [], loading: stateCityLoading } = useSelector((state: any) => state.stateCity || {});
+
   const [preview, setPreview] = useState<string | null>(null);
 
   // ⭐ YELLOW STAR: ADDED — STORE ONLY NEWLY SELECTED IMAGE AS BASE64
@@ -85,6 +93,8 @@ const ProfessionalProfile = () => {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProfileFormValues>({
     defaultValues: {
@@ -99,12 +109,45 @@ const ProfessionalProfile = () => {
       userType: "",
       userGender: "",
       businessType: "",
+      // ⭐ UPDATED
+      state: "",
+      city: "",
       isUserActive: "0",
       parentUserMobileNumber: "",
     },
   });
 
   // ⭐ YELLOW STAR: UPDATED — REUSE COMMON TextInput / SelectInput COMPONENTS
+
+  // ⭐ UPDATED
+  const getDisplayName = (name: any) => {
+    if (!name) return "";
+    if (typeof name === "string") return name;
+    if (typeof name === "object") return name.en || name.mr || name.hi || name.gu || name.ta || name.te || name.kn || name.ml || name.pa || "";
+    return String(name);
+  };
+
+  // ⭐ UPDATED
+  const selectedState = watch("state");
+
+  // ⭐ UPDATED
+  const stateOptions = useMemo(() => [
+    { label: "Select state", value: "" },
+    ...(states || []).map((item: any) => {
+      const stateCode = item?.isoCode || item?.stateCode || item?.code || "";
+      const stateName = getDisplayName(item?.name || item?.stateName);
+      return { label: stateName || stateCode, value: stateCode };
+    }),
+  ], [states]);
+
+  // ⭐ UPDATED
+  const cityOptions = useMemo(() => [
+    { label: !selectedState ? "Select state first" : stateCityLoading ? "Loading..." : "Select city", value: "" },
+    ...(cities || []).map((item: any) => {
+      const cityName = getDisplayName(item?.name || item?.cityName);
+      return { label: cityName, value: cityName };
+    }),
+  ], [cities, selectedState, stateCityLoading]);
 
   const fullName = useMemo(() => {
     return [profile?.userFirstName, profile?.userMiddleName, profile?.userLastName]
@@ -114,15 +157,22 @@ const ProfessionalProfile = () => {
 
   // ⭐ YELLOW STAR: UPDATED — API VALUE "1" MEANS ACTIVE
   // const isActive = String(profile?.isUserActive ?? "") === "1";
-  const isActive =
-    profile?.isUserActive !== null &&
-    profile?.isUserActive !== undefined &&
-    String(profile?.isUserActive).trim() !== "" &&
-    String(profile?.isUserActive) !== "0";
-
+  const isActive = profile?.isUserActive !== "0";
+  console.log({ profile })
   useEffect(() => {
     dispatch(getProfessionalProfile());
   }, [dispatch]);
+
+  // ⭐ UPDATED
+  useEffect(() => {
+    dispatch(getStates("") as any);
+  }, [dispatch]);
+
+  // ⭐ UPDATED
+  useEffect(() => {
+    if (!selectedState) return;
+    dispatch(getCitiesByState({ stateCode: selectedState, searchText: "" }) as any);
+  }, [dispatch, selectedState]);
 
   useEffect(() => {
     if (!profile) return;
@@ -139,6 +189,9 @@ const ProfessionalProfile = () => {
       userType: profile.userType || "",
       userGender: profile.userGender || "",
       businessType: profile.businessType || "",
+      // ⭐ UPDATED
+      state: typeof profile.state === "object" ? profile.state?.isoCode || profile.state?.stateCode || profile.state?.code || "" : profile.state || "",
+      city: typeof profile.city === "object" ? getDisplayName(profile.city?.name || profile.city?.cityName) : profile.city || "",
       isUserActive: profile.isUserActive || "0",
       parentUserMobileNumber: profile.parentUserMobileNumber || "",
     });
@@ -222,6 +275,9 @@ const ProfessionalProfile = () => {
           userEmail: data.userEmail?.trim() || "",
           userType: data.userType || "",
           businessType: data.businessType || "",
+          // ⭐ UPDATED
+          state: data.state || "",
+          city: data.city || "",
 
           // ⭐ YELLOW STAR: ADDED — SEND BASE64 ONLY WHEN USER SELECTS A NEW IMAGE
           ...(profileImageBase64
@@ -242,7 +298,7 @@ const ProfessionalProfile = () => {
       );
     }
   };
-
+  console.log({ isActive })
   return (
     <div className="min-h-full bg-background px-3 py-4 text-foreground sm:px-5 lg:px-4">
       <motion.div
@@ -268,19 +324,6 @@ const ProfessionalProfile = () => {
                 </p>
               </div>
             </div>
-          </div>
-
-          <div
-            className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${isActive
-              ? "border-emerald-300/20 bg-emerald-200/10 text-emerald-600 dark:text-emerald-400"
-              : "border-destructive/20 bg-destructive/10 text-destructive"
-              }`}
-          >
-            <span
-              className={`h-2 w-2 rounded-full ${isActive ? "bg-emerald-500" : "bg-destructive"
-                }`}
-            />
-            {isActive ? "Active Subscription" : "Inactive Subscription"}
           </div>
         </div>
 
@@ -618,6 +661,43 @@ const ProfessionalProfile = () => {
                           />
                         )}
                       />
+
+                        {/* ⭐ UPDATED */}
+                        <Controller
+                          name="state"
+                          control={control}
+                          render={({ field }) => (
+                            <SelectInput
+                              label="State"
+                              name={field.name}
+                              value={field.value}
+                              onChange={(e: any) => {
+                                const value = e?.target?.value ?? "";
+                                field.onChange(value);
+                                setValue("city", "");
+                              }}
+                              options={stateOptions}
+                              placeholder="Select state"
+                            />
+                          )}
+                        />
+
+                        {/* ⭐ UPDATED */}
+                        <Controller
+                          name="city"
+                          control={control}
+                          render={({ field }) => (
+                            <SelectInput
+                              label="City"
+                              name={field.name}
+                              value={field.value}
+                              onChange={(e: any) => field.onChange(e?.target?.value ?? "")}
+                              options={cityOptions}
+                              placeholder="Select city"
+                              disabled={!selectedState || stateCityLoading}
+                            />
+                          )}
+                        />
                     </div>
                   </div>
 
