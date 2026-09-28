@@ -30,7 +30,22 @@ export const createInitialTripAllocation = () => ({
 		requiredCapacityTon: "",
 		requiredWeightTon: "",
 		expectedFreight: "",
+
+		// ⭐ YELLOW STAR: ADDED — MULTI VEHICLE REQUIREMENT
+		vehicleRequirement: {
+			vehicleType: "",
+			vehicleBodyType: "",
+			vehicleCapacity: "",
+			numberOfVehicles: "1",
+			specialVehicleRequirement: "",
+		},
+
+		// ⭐ YELLOW STAR: ADDED — KEEP VEHICLE COUNT DIRECTLY AVAILABLE
+		numberOfVehicles: "1",
+		requiredNumberOfVehicles: "1",
 	},
+
+
 
 	vehicleSelection: {
 		selectedVehicleId: "",
@@ -194,6 +209,29 @@ export const mapTransportOrderToAllocation = (order: any) => ({
 		"",
 	requiredWeightTon: order?.loadDetails?.weight || "",
 	expectedFreight: order?.freightDetails?.expectedFreight || "",
+
+	// ⭐ YELLOW STAR: ADDED — PRESERVE COMPLETE VEHICLE REQUIREMENT
+	vehicleRequirement: {
+		vehicleType: order?.vehicleRequirement?.vehicleType || "",
+		vehicleBodyType: order?.vehicleRequirement?.vehicleBodyType || "",
+		vehicleCapacity: order?.vehicleRequirement?.vehicleCapacity || "",
+		numberOfVehicles:
+			order?.vehicleRequirement?.numberOfVehicles || "1",
+		specialVehicleRequirement:
+			order?.vehicleRequirement?.specialVehicleRequirement || "",
+	},
+
+	// ⭐ YELLOW STAR: ADDED — USED FOR ONE-BY-ONE VEHICLE ALLOCATION
+	numberOfVehicles:
+		order?.vehicleRequirement?.numberOfVehicles ||
+		order?.numberOfVehicles ||
+		"1",
+
+	requiredNumberOfVehicles:
+		order?.vehicleRequirement?.numberOfVehicles ||
+		order?.requiredNumberOfVehicles ||
+		order?.numberOfVehicles ||
+		"1",
 });
 
 export const toTripAllocationPayload = (form: any) => ({
@@ -232,112 +270,112 @@ export const toTripAllocationPayload = (form: any) => ({
 		form.statusHistory?.length > 0
 			? form.statusHistory
 			: [
-					{
-						status: form.tripStatus || "pending",
-						updatedOn: new Date().toISOString(),
-						updatedBy: "dispatcher",
-					},
-			  ],
+				{
+					status: form.tripStatus || "pending",
+					updatedOn: new Date().toISOString(),
+					updatedBy: "dispatcher",
+				},
+			],
 });
 
 
 
 export const selectClassNames = {
-        control: ({ isFocused, isDisabled }: any) =>
-            `!min-h-10 !rounded-md !border !shadow-none ${isFocused
-                ? "!border-primary !ring-1 !ring-primary"
-                : "!border-border"
-            } ${isDisabled
-                ? "!bg-muted !text-muted-foreground"
-                : "!bg-card !text-foreground"
-            }`,
-        valueContainer: () => "!px-3 !py-0",
-        singleValue: () => "!text-foreground",
-        input: () => "!text-foreground",
-        placeholder: () => "!text-muted-foreground",
-        indicatorsContainer: () => "!text-muted-foreground",
-        dropdownIndicator: () => "!text-muted-foreground hover:!text-foreground",
-        indicatorSeparator: () => "!bg-border",
-        menu: () => "!z-50 !border !border-border !bg-popover !text-popover-foreground !shadow-md",
-        menuList: () => "!bg-popover !p-1",
-        option: ({ isFocused, isSelected }: any) =>
-            `!cursor-pointer !rounded-sm ${isSelected
-                ? "!bg-primary !text-primary-foreground"
-                : isFocused
-                    ? "!bg-muted !text-foreground"
-                    : "!bg-popover !text-popover-foreground"
-            }`,
-        noOptionsMessage: () => "!text-muted-foreground",
-    };
+	control: ({ isFocused, isDisabled }: any) =>
+		`!min-h-10 !rounded-md !border !shadow-none ${isFocused
+			? "!border-primary !ring-1 !ring-primary"
+			: "!border-border"
+		} ${isDisabled
+			? "!bg-muted !text-muted-foreground"
+			: "!bg-card !text-foreground"
+		}`,
+	valueContainer: () => "!px-3 !py-0",
+	singleValue: () => "!text-foreground",
+	input: () => "!text-foreground",
+	placeholder: () => "!text-muted-foreground",
+	indicatorsContainer: () => "!text-muted-foreground",
+	dropdownIndicator: () => "!text-muted-foreground hover:!text-foreground",
+	indicatorSeparator: () => "!bg-border",
+	menu: () => "!z-50 !border !border-border !bg-popover !text-popover-foreground !shadow-md",
+	menuList: () => "!bg-popover !p-1",
+	option: ({ isFocused, isSelected }: any) =>
+		`!cursor-pointer !rounded-sm ${isSelected
+			? "!bg-primary !text-primary-foreground"
+			: isFocused
+				? "!bg-muted !text-foreground"
+				: "!bg-popover !text-popover-foreground"
+		}`,
+	noOptionsMessage: () => "!text-muted-foreground",
+};
 
 
 
 
 export const selectThemeStyles = {
-    control: (base: any, state: any) => ({
-        ...base,
-        backgroundColor: "var(--background)",
-        borderColor: state.isFocused ? "var(--primary)" : "var(--border)",
-        boxShadow: state.isFocused ? "0 0 0 1px var(--primary)" : "none",
-        "&:hover": {
-            borderColor: "var(--primary)",
-        },
-    }),
-    menu: (base: any) => ({
-        ...base,
-        zIndex: 9999,
-        backgroundColor: "var(--card)",
-        border: "1px solid var(--border)",
-        overflow: "hidden",
-    }),
-    menuList: (base: any) => ({
-        ...base,
-        backgroundColor: "var(--card)",
-        padding: "4px",
-    }),
-    option: (base: any, state: any) => ({
-        ...base,
-        cursor: "pointer",
-        backgroundColor: state.isSelected
-            ? "var(--primary)"
-            : state.isFocused
-                ? "var(--muted)"
-                : "var(--card)",
-        color: state.isSelected
-            ? "var(--primary-foreground)"
-            : "var(--card-foreground)",
-        "&:active": {
-            backgroundColor: "var(--muted)",
-        },
-    }),
-    singleValue: (base: any) => ({
-        ...base,
-        color: "var(--foreground)",
-    }),
-    input: (base: any) => ({
-        ...base,
-        color: "var(--foreground)",
-    }),
-    placeholder: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-    }),
-    dropdownIndicator: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-        "&:hover": {
-            color: "var(--primary)",
-        },
-    }),
-    clearIndicator: (base: any) => ({
-        ...base,
-        color: "var(--muted-foreground)",
-        "&:hover": {
-            color: "var(--danger)",
-        },
-    }),
-    indicatorSeparator: (base: any) => ({
-        ...base,
-        backgroundColor: "var(--border)",
-    }),
+	control: (base: any, state: any) => ({
+		...base,
+		backgroundColor: "var(--background)",
+		borderColor: state.isFocused ? "var(--primary)" : "var(--border)",
+		boxShadow: state.isFocused ? "0 0 0 1px var(--primary)" : "none",
+		"&:hover": {
+			borderColor: "var(--primary)",
+		},
+	}),
+	menu: (base: any) => ({
+		...base,
+		zIndex: 9999,
+		backgroundColor: "var(--card)",
+		border: "1px solid var(--border)",
+		overflow: "hidden",
+	}),
+	menuList: (base: any) => ({
+		...base,
+		backgroundColor: "var(--card)",
+		padding: "4px",
+	}),
+	option: (base: any, state: any) => ({
+		...base,
+		cursor: "pointer",
+		backgroundColor: state.isSelected
+			? "var(--primary)"
+			: state.isFocused
+				? "var(--muted)"
+				: "var(--card)",
+		color: state.isSelected
+			? "var(--primary-foreground)"
+			: "var(--card-foreground)",
+		"&:active": {
+			backgroundColor: "var(--muted)",
+		},
+	}),
+	singleValue: (base: any) => ({
+		...base,
+		color: "var(--foreground)",
+	}),
+	input: (base: any) => ({
+		...base,
+		color: "var(--foreground)",
+	}),
+	placeholder: (base: any) => ({
+		...base,
+		color: "var(--muted-foreground)",
+	}),
+	dropdownIndicator: (base: any) => ({
+		...base,
+		color: "var(--muted-foreground)",
+		"&:hover": {
+			color: "var(--primary)",
+		},
+	}),
+	clearIndicator: (base: any) => ({
+		...base,
+		color: "var(--muted-foreground)",
+		"&:hover": {
+			color: "var(--danger)",
+		},
+	}),
+	indicatorSeparator: (base: any) => ({
+		...base,
+		backgroundColor: "var(--border)",
+	}),
 };

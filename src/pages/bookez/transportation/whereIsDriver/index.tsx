@@ -107,10 +107,57 @@ const getVehicleNumber = (item: any) => {
     return item?.vehicle?.vehicleNumber || item?.vehicleNumber || item?.vehicle?.vehicleCode || item?.vehicle?.code || "-";
 };
 
+// ⭐ YELLOW STAR: ADDED — PARENT/BUSINESS REFERENCE
+const getTransportOrderNumber = (item: any) =>
+    String(
+        item?.transportOrderNumber ||
+        item?.transportOrder?.transportOrderNumber ||
+        item?.orderNumber ||
+        ""
+    ).trim();
+
 const getTripLabel = (item: any) => {
     const trackingVoucher = getTripTrackingVoucher(item);
 
-    return item?.transportOrderNumber || item?.tripNumber || trackingVoucher || "-";
+    // ⭐ YELLOW STAR: UPDATED — KEEP TRANSPORT ORDER AS THE PARENT/BUSINESS REFERENCE
+    return (
+        getTransportOrderNumber(item) ||
+        item?.tripNumber ||
+        trackingVoucher ||
+        "-"
+    );
+};
+
+// ⭐ YELLOW STAR: UPDATED — EXACT PHYSICAL VEHICLE TRIP REFERENCE.
+// Tracking API currently returns the parent order in `transportOrderNumber`
+// and the exact Trip Allocation voucher in `tripNumber` (example: TO-47 + TA-50).
+// `tripNumber` is used only when it is different from the parent order so old
+// records where tripNumber itself contains TO-xx are not misclassified.
+const getAllocationVoucherNumber = (item: any) => {
+    const transportOrderNumber = String(
+        item?.transportOrderNumber ||
+        item?.transportOrder?.transportOrderNumber ||
+        item?.orderNumber ||
+        ""
+    ).trim();
+
+    const tripNumber = String(item?.tripNumber || "").trim();
+
+    return String(
+        item?.allocationVoucherNumber ||
+        item?.tripAllocationVoucherNumber ||
+        item?.allocation?.allocationVoucherNumber ||
+        item?.allocation?.tripAllocationVoucherNumber ||
+        item?.allocation?.tripNumber ||
+        item?.tripAllocation?.allocationVoucherNumber ||
+        item?.tripAllocation?.tripNumber ||
+        (transportOrderNumber &&
+        tripNumber &&
+        tripNumber.toLowerCase() !== transportOrderNumber.toLowerCase()
+            ? tripNumber
+            : "") ||
+        ""
+    ).trim();
 };
 
 const getLastUpdated = (item: any) => {
@@ -221,6 +268,8 @@ const DriverCard = ({
     const driverName = getDriverName(item);
     const vehicleNumber = getVehicleNumber(item);
     const tripLabel = getTripLabel(item);
+    // ⭐ YELLOW STAR: ADDED — SHOW EXACT ALLOCATION FOR MULTI-VEHICLE ORDERS
+    const allocationVoucherNumber = getAllocationVoucherNumber(item);
     const lastUpdated = getLastUpdated(item);
 
     /* ⭐ ADDED — STATUS FOR CARD */
@@ -264,6 +313,13 @@ const DriverCard = ({
                                 <p className="mt-1 truncate text-xs text-muted-foreground">
                                     Trip: {tripLabel}
                                 </p>
+
+                                {/* ⭐ YELLOW STAR: ADDED — KEEP ALLOCATION VISIBLE WITHOUT REPLACING THE ORDER */}
+                                {allocationVoucherNumber && (
+                                    <p className="mt-0.5 truncate text-xs font-semibold text-primary">
+                                        Allocation: {allocationVoucherNumber}
+                                    </p>
+                                )}
                             </div>
 
                             {/* ⭐ CHANGED — STATUS IS NOW DYNAMIC */}
@@ -478,7 +534,10 @@ const WhereIsMyDriver = () => {
             ...latestDriverRecords.map((item: any) => ({
                 label: getDriverName(item),
                 value: getDriverIdentity(item),
-                subtitle: getVehicleNumber(item),
+                subtitle: [
+                    getVehicleNumber(item),
+                    getAllocationVoucherNumber(item),
+                ].filter(Boolean).join(" • "),
             })),
         ];
     }, [latestDriverRecords]);
@@ -497,6 +556,8 @@ const WhereIsMyDriver = () => {
                     getDriverName(item),
                     getVehicleNumber(item),
                     getTripLabel(item),
+                    // ⭐ YELLOW STAR: ADDED — ALLOW SEARCH BY TA-* FOR MULTI-VEHICLE TRIPS
+                    getAllocationVoucherNumber(item),
                     getTripTrackingVoucher(item),
                     item?.currentAddress,
                     item?.tripStatus,
@@ -551,6 +612,9 @@ const WhereIsMyDriver = () => {
                 trackingVoucherNumber: trackingVoucher,
                 followDriver: true,
                 tripLabel: getTripLabel(item),
+                // ⭐ YELLOW STAR: ADDED — PRESERVE BOTH REFERENCES FOR THE EXACT VEHICLE TRIP
+                transportOrderNumber: getTransportOrderNumber(item),
+                allocationVoucherNumber: getAllocationVoucherNumber(item),
                 initialCurrentLocation: item?.currentLocation || null,
                 initialTracking: item,
             },
@@ -887,7 +951,8 @@ const WhereIsMyDriver = () => {
                                     <DriverCard
                                         key={
                                             getTripTrackingVoucher(item) ||
-                                            `${getDriverIdentity(item)}-${getVehicleNumber(item)}-${index}`
+                                            // ⭐ YELLOW STAR: UPDATED — INCLUDE ALLOCATION IN FALLBACK KEY
+                                            `${getDriverIdentity(item)}-${getVehicleNumber(item)}-${getAllocationVoucherNumber(item) || "legacy"}-${index}`
                                         }
                                         item={item}
                                         onTrack={openDriverMap}

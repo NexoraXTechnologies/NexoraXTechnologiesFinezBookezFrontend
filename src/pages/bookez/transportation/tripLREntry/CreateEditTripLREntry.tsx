@@ -242,6 +242,8 @@ const TouchUpImagePreview = ({ source, alt }: { source: string; alt: string }) =
 const createInitialTripLRCollection = () => ({
     tripNumber: "",
     transportOrderNumber: "",
+    // ⭐ YELLOW STAR: ADDED
+    allocationVoucherNumber: "",
     transportTouchUp: "",
     lrTouchUp: [],
     lrNumber: "",
@@ -581,41 +583,42 @@ const mapAllocationVehicleToLR = (allocation: any = {}) => {
     };
 };
 
-const findAllocationForOrder = (allocations: any[] = [], orderVoucher = "") => {
-    const normalized = String(orderVoucher || "")
-        .trim()
-        .toLowerCase();
+// ⭐ YELLOW STAR: ADDED
+const getAllocationVoucher = (allocation: any = {}) =>
+    allocation?.allocationVoucherNumber ||
+    allocation?.tripAllocationVoucherNumber ||
+    allocation?.tripNumber ||
+    "";
 
-    if (!normalized) return null;
+// ⭐ YELLOW STAR: UPDATED
+const findAllocationsForOrder = (allocations: any[] = [], orderVoucher = "") => {
+    const normalized = normalizeVoucher(orderVoucher);
 
-    return (
-        allocations
-            .filter((item: any) => {
-                const status = String(item?.tripStatus || "")
-                    .trim()
-                    .toLowerCase();
+    if (!normalized) return [];
 
-                if (status === "cancelled" || status === "canceled") {
-                    return false;
-                }
+    return (allocations || [])
+        .filter((item: any) => {
+            const status = String(item?.tripStatus || item?.status || "")
+                .trim()
+                .toLowerCase();
 
-                const orderNo = String(
-                    item?.transportOrder?.transportOrderNumber ||
-                    item?.transportOrderNumber ||
-                    item?.tripNumber ||
-                    ""
-                )
-                    .trim()
-                    .toLowerCase();
+            if (status === "cancelled" || status === "canceled") {
+                return false;
+            }
 
-                return orderNo === normalized;
-            })
-            .sort(
-                (a: any, b: any) =>
-                    new Date(b?.allocationDate || b?.createdOn || 0).getTime() -
-                    new Date(a?.allocationDate || a?.createdOn || 0).getTime()
-            )[0] || null
-    );
+            const orderNo = normalizeVoucher(
+                item?.transportOrder?.transportOrderNumber ||
+                item?.transportOrderNumber ||
+                ""
+            );
+
+            return orderNo === normalized;
+        })
+        .sort(
+            (a: any, b: any) =>
+                new Date(b?.allocationDate || b?.createdOn || 0).getTime() -
+                new Date(a?.allocationDate || a?.createdOn || 0).getTime()
+        );
 };
 
 const toTripLRCollectionPayload = (form: any, overrides: any = {}) => {
@@ -633,6 +636,12 @@ const toTripLRCollectionPayload = (form: any, overrides: any = {}) => {
         tripNumber: merged.tripNumber || "",
         transportOrderNumber:
             merged.transportOrderNumber || merged.tripNumber || "",
+
+        // ⭐ YELLOW STAR: ADDED
+        allocationVoucherNumber:
+            merged.allocationVoucherNumber ||
+            merged.tripAllocationVoucherNumber ||
+            "",
 
         lrDate: merged.lrDate || new Date().toISOString(),
 
@@ -786,6 +795,8 @@ const CreateEditTripLREntry = () => {
     const [transportTouchups, setTransportTouchups] = useState<any[]>([]);
     // @ts-ignore
     const [lrEntries, setLrEntries] = useState<any[]>([]);
+    // ⭐ YELLOW STAR: ADDED
+    const [tripAllocations, setTripAllocations] = useState<any[]>([]);
     const [allocationLoading, setAllocationLoading] = useState(false);
     const [driverPickError, setDriverPickError] = useState("");
     const [vehiclePickError, setVehiclePickError] = useState("");
@@ -892,8 +903,9 @@ const CreateEditTripLREntry = () => {
     // ]);
 
 
+    // ⭐ YELLOW STAR: UPDATED — KEEP CURRENT ORDER VISIBLE IN EDIT/VIEW EVEN AFTER ORDER IS CLOSED
     const transportOrderOptions = useMemo(() => {
-        return transportOrders
+        const options = transportOrders
             .filter((order: any) => Boolean(getTransportOrderVoucher(order)))
             .map((order: any) => {
                 const voucher = getTransportOrderVoucher(order);
@@ -919,7 +931,78 @@ const CreateEditTripLREntry = () => {
                     raw: order,
                 };
             });
-    }, [transportOrders]);
+
+        // ⭐ YELLOW STAR: ADDED — CLOSED ORDERS ARE NOT RETURNED BY THE OPEN-ORDER LIST API.
+        // In edit/view mode, build the current option from the already-fetched LR record
+        // so the saved Transport Order name remains visible without changing create-mode behavior.
+        const currentVoucher = String(
+            form.transportOrderNumber ||
+            form.tripNumber ||
+            ""
+        ).trim();
+
+        if ((isEdit || isView) && currentVoucher) {
+            const currentAlreadyExists = options.some(
+                (option: any) =>
+                    normalizeVoucher(option?.value) ===
+                    normalizeVoucher(currentVoucher)
+            );
+
+            if (!currentAlreadyExists) {
+                const customer =
+                    form.customer?.customerName ||
+                    "-";
+
+                const source =
+                    form.route?.source ||
+                    form.consignor?.location?.city ||
+                    "-";
+
+                const destination =
+                    form.route?.destination ||
+                    form.consignee?.location?.city ||
+                    "-";
+
+                options.unshift({
+                    label: `${currentVoucher} - ${customer} (${source} → ${destination})`,
+                    value: currentVoucher,
+                    raw: null,
+                });
+            }
+        }
+
+        return options;
+    }, [
+        transportOrders,
+        isEdit,
+        isView,
+        form.transportOrderNumber,
+        form.tripNumber,
+        form.customer?.customerName,
+        form.route?.source,
+        form.route?.destination,
+        form.consignor?.location?.city,
+        form.consignee?.location?.city,
+    ]);
+
+    // ⭐ YELLOW STAR: ADDED
+    const tripAllocationOptions = useMemo(() => {
+        return (tripAllocations || [])
+            .map((allocation: any) => {
+                const allocationVoucherNumber = getAllocationVoucher(allocation);
+                const vehicle = mapAllocationVehicleToLR(allocation);
+                const driver = mapAllocationDriverToLR(allocation);
+
+                if (!allocationVoucherNumber) return null;
+
+                return {
+                    label: `${allocationVoucherNumber} - ${vehicle.vehicleNumber || "-"} - ${driver.driverName || "-"}`,
+                    value: allocationVoucherNumber,
+                    raw: allocation,
+                };
+            })
+            .filter(Boolean);
+    }, [tripAllocations]);
 
     const allTransportTouchUpOptions = useMemo(() => {
         const selectedOrder = normalizeVoucher(form.transportOrderNumber || form.tripNumber);
@@ -1195,14 +1278,16 @@ const CreateEditTripLREntry = () => {
         }
     }, [dispatch]);
 
-    const fetchAllocationForOrder = useCallback(
+    // ⭐ YELLOW STAR: UPDATED
+    const fetchAllocationsForOrder = useCallback(
         async (orderVoucher: string) => {
             const voucher = String(orderVoucher || "").trim();
 
             if (!voucher) {
+                setTripAllocations([]);
                 setDriverPickError("");
                 setVehiclePickError("");
-                return null;
+                return [];
             }
 
             try {
@@ -1216,41 +1301,28 @@ const CreateEditTripLREntry = () => {
                 ).unwrap();
 
                 const list = getApiList(res);
-                const allocation = findAllocationForOrder(list, voucher);
+                const matchingAllocations = findAllocationsForOrder(list, voucher);
 
-                if (!allocation) {
+                setTripAllocations(matchingAllocations);
+
+                if (!matchingAllocations.length) {
                     setDriverPickError(
                         "No trip allocation found for this order. Allocate trip first."
                     );
                     setVehiclePickError(
                         "No vehicle allocation found for this order."
                     );
-                    return null;
-                }
-
-                const driver = mapAllocationDriverToLR(allocation);
-                const vehicle = mapAllocationVehicleToLR(allocation);
-
-                if (!driver.driverName?.trim()) {
-                    setDriverPickError("Driver not assigned in trip allocation.");
                 } else {
                     setDriverPickError("");
-                }
-
-                if (!vehicle.vehicleNumber?.trim()) {
-                    setVehiclePickError("Vehicle not assigned in trip allocation.");
-                } else {
                     setVehiclePickError("");
                 }
 
-                return {
-                    driver,
-                    vehicle,
-                };
+                return matchingAllocations;
             } catch (error: any) {
+                setTripAllocations([]);
                 setDriverPickError(error?.message || "Failed to load trip allocation");
                 setVehiclePickError(error?.message || "Failed to load trip allocation");
-                return null;
+                return [];
             } finally {
                 setAllocationLoading(false);
             }
@@ -1265,7 +1337,20 @@ const CreateEditTripLREntry = () => {
         const editVoucher = voucherNumber || getLRVoucher(passedData);
 
         if (!editVoucher) {
-            if (passedData) setForm(mergeTripLRCollectionForm(passedData));
+            if (passedData) {
+                const mergedPassedData = mergeTripLRCollectionForm(passedData);
+                setForm(mergedPassedData);
+
+                // ⭐ YELLOW STAR: ADDED
+                const passedOrderNumber =
+                    mergedPassedData.transportOrderNumber ||
+                    mergedPassedData.tripNumber ||
+                    "";
+
+                if (passedOrderNumber) {
+                    await fetchAllocationsForOrder(passedOrderNumber);
+                }
+            }
             return;
         }
 
@@ -1277,11 +1362,33 @@ const CreateEditTripLREntry = () => {
             ).unwrap();
 
             const record = getSingleRecord(res);
+            const mergedRecord = mergeTripLRCollectionForm(record);
 
-            setForm(mergeTripLRCollectionForm(record));
+            setForm(mergedRecord);
+
+            // ⭐ YELLOW STAR: ADDED
+            const recordOrderNumber =
+                mergedRecord.transportOrderNumber ||
+                mergedRecord.tripNumber ||
+                "";
+
+            if (recordOrderNumber) {
+                await fetchAllocationsForOrder(recordOrderNumber);
+            }
         } catch (error: any) {
             if (passedData) {
-                setForm(mergeTripLRCollectionForm(passedData));
+                const mergedPassedData = mergeTripLRCollectionForm(passedData);
+                setForm(mergedPassedData);
+
+                // ⭐ YELLOW STAR: ADDED
+                const passedOrderNumber =
+                    mergedPassedData.transportOrderNumber ||
+                    mergedPassedData.tripNumber ||
+                    "";
+
+                if (passedOrderNumber) {
+                    await fetchAllocationsForOrder(passedOrderNumber);
+                }
                 return;
             }
             toast.error(error?.message || "Failed to load LR collection");
@@ -1289,7 +1396,15 @@ const CreateEditTripLREntry = () => {
         } finally {
             setLoading(false);
         }
-    }, [dispatch, isEdit, isView, location.state?.lrData, navigate, voucherNumber]);
+    }, [
+        dispatch,
+        fetchAllocationsForOrder,
+        isEdit,
+        isView,
+        location.state?.lrData,
+        navigate,
+        voucherNumber,
+    ]);
 
     useEffect(() => {
         fetchTransportOrders("");
@@ -1342,6 +1457,55 @@ const CreateEditTripLREntry = () => {
     //         },
     //     }));
     // };
+
+    // ⭐ YELLOW STAR: ADDED
+    const handleAllocationSelect = (allocationVoucherNumber: string) => {
+        const selectedAllocation = (tripAllocations || []).find(
+            (allocation: any) =>
+                normalizeVoucher(getAllocationVoucher(allocation)) ===
+                normalizeVoucher(allocationVoucherNumber)
+        );
+
+        if (!selectedAllocation) {
+            setForm((prev: any) => ({
+                ...prev,
+                allocationVoucherNumber,
+                driver: {
+                    driverCode: "",
+                    driverName: "",
+                },
+                vehicle: {
+                    vehicleCode: "",
+                    vehicleNumber: "",
+                    vehicleType: "",
+                },
+            }));
+
+            return;
+        }
+
+        const driver = mapAllocationDriverToLR(selectedAllocation);
+        const vehicle = mapAllocationVehicleToLR(selectedAllocation);
+
+        setDriverPickError(
+            driver.driverName?.trim()
+                ? ""
+                : "Driver not assigned in trip allocation."
+        );
+
+        setVehiclePickError(
+            vehicle.vehicleNumber?.trim()
+                ? ""
+                : "Vehicle not assigned in trip allocation."
+        );
+
+        setForm((prev: any) => ({
+            ...prev,
+            allocationVoucherNumber: getAllocationVoucher(selectedAllocation),
+            driver,
+            vehicle,
+        }));
+    };
 
     const handleTransportOrderSelect =
         async (
@@ -1398,52 +1562,107 @@ const CreateEditTripLREntry = () => {
                     "Selected transport order record was not found"
                 );
 
-                updateRootField(
-                    "transportOrderNumber",
-                    orderVoucher
-                );
+                // ⭐ YELLOW STAR: UPDATED
+                setTripAllocations([]);
 
-                updateRootField(
-                    "tripNumber",
-                    orderVoucher
-                );
-
-                return;
-            }
-
-            setForm((prev: any) => ({
-                ...mapTransportOrderToLRCollection(selected, prev),
-                transportTouchUp: "",
-                lrTouchUp: isEdit ? prev.lrTouchUp || [] : [],
-            }));
-
-            const allocationResult =
-                await fetchAllocationForOrder(
-                    orderVoucher
-                );
-
-            setForm((prev: any) => ({
-                ...prev,
-
-                driver:
-                    allocationResult
-                        ?.driver || {
+                setForm((prev: any) => ({
+                    ...prev,
+                    transportOrderNumber: orderVoucher,
+                    tripNumber: orderVoucher,
+                    allocationVoucherNumber: "",
+                    driver: {
                         driverCode: "",
                         driverName: "",
                     },
-
-                vehicle:
-                    allocationResult
-                        ?.vehicle || {
+                    vehicle: {
                         vehicleCode: "",
                         vehicleNumber: "",
                         vehicleType: "",
                     },
+                }));
 
-                // ⭐ ADDED — preserve value after second setForm
-                ewayBillGeneratedBy:
-                    ewayBillGeneratedBy,
+                return;
+            }
+
+            // ⭐ YELLOW STAR: UPDATED
+            setForm((prev: any) => ({
+                ...mapTransportOrderToLRCollection(selected, prev),
+                allocationVoucherNumber: "",
+                transportTouchUp: "",
+                lrTouchUp: isEdit ? prev.lrTouchUp || [] : [],
+                driver: {
+                    driverCode: "",
+                    driverName: "",
+                },
+                vehicle: {
+                    vehicleCode: "",
+                    vehicleNumber: "",
+                    vehicleType: "",
+                },
             }));
+
+            const matchingAllocations =
+                await fetchAllocationsForOrder(
+                    orderVoucher
+                );
+
+            // ⭐ YELLOW STAR: ADDED
+            // Keep old single-allocation convenience, but never guess when
+            // the Transport Order has multiple physical vehicle trips.
+            if (matchingAllocations.length === 1) {
+                const onlyAllocation = matchingAllocations[0];
+                const driver = mapAllocationDriverToLR(onlyAllocation);
+                const vehicle = mapAllocationVehicleToLR(onlyAllocation);
+
+                setDriverPickError(
+                    driver.driverName?.trim()
+                        ? ""
+                        : "Driver not assigned in trip allocation."
+                );
+
+                setVehiclePickError(
+                    vehicle.vehicleNumber?.trim()
+                        ? ""
+                        : "Vehicle not assigned in trip allocation."
+                );
+
+                setForm((prev: any) => ({
+                    ...prev,
+                    allocationVoucherNumber:
+                        getAllocationVoucher(onlyAllocation),
+                    driver,
+                    vehicle,
+                    ewayBillGeneratedBy,
+                }));
+            } else {
+                // ⭐ YELLOW STAR: UPDATED
+                setDriverPickError(
+                    matchingAllocations.length > 1
+                        ? "Select trip allocation to load driver."
+                        : "No trip allocation found for this order. Allocate trip first."
+                );
+
+                setVehiclePickError(
+                    matchingAllocations.length > 1
+                        ? "Select trip allocation to load vehicle."
+                        : "No vehicle allocation found for this order."
+                );
+
+                setForm((prev: any) => ({
+                    ...prev,
+                    allocationVoucherNumber: "",
+                    driver: {
+                        driverCode: "",
+                        driverName: "",
+                    },
+                    vehicle: {
+                        vehicleCode: "",
+                        vehicleNumber: "",
+                        vehicleType: "",
+                    },
+                    ewayBillGeneratedBy,
+                }));
+            }
 
             console.log(
                 "[TRANSPORT ORDER] Final value copied to form:",
@@ -1467,6 +1686,12 @@ const CreateEditTripLREntry = () => {
 
         if (key === "transportOrderNumber") {
             handleTransportOrderSelect(value);
+            return;
+        }
+
+        // ⭐ YELLOW STAR: ADDED
+        if (key === "allocationVoucherNumber") {
+            handleAllocationSelect(value);
             return;
         }
 
@@ -1604,6 +1829,20 @@ const CreateEditTripLREntry = () => {
     const validateForm = () => {
         if (!form.tripNumber?.trim() && !form.transportOrderNumber?.trim()) {
             toast.warn("Please select a transport order / trip");
+            return false;
+        }
+
+        // ⭐ YELLOW STAR: ADDED
+        if (
+            !isEdit &&
+            tripAllocations.length > 0 &&
+            !String(
+                form.allocationVoucherNumber ||
+                form.tripAllocationVoucherNumber ||
+                ""
+            ).trim()
+        ) {
+            toast.warn("Please select a trip allocation");
             return false;
         }
 
@@ -1983,6 +2222,11 @@ const CreateEditTripLREntry = () => {
 
     const fieldForm = {
         transportOrderNumber: form.transportOrderNumber || form.tripNumber || "",
+        // ⭐ YELLOW STAR: ADDED
+        allocationVoucherNumber:
+            form.allocationVoucherNumber ||
+            form.tripAllocationVoucherNumber ||
+            "",
         transportTouchUp: form.transportTouchUp || "",
         lrDate: toDateTimeLocalValue(form.lrDate),
 
@@ -2038,6 +2282,33 @@ const CreateEditTripLREntry = () => {
             placeholder: "Select transport order",
             onSearchChange: handleTripSearchChange,
             disabled: isEdit || isView,
+        },
+        // ⭐ YELLOW STAR: ADDED
+        {
+            key: "allocationVoucherNumber",
+            label: "Trip Allocation",
+            type: "select",
+            options: tripAllocationOptions,
+            mandatory: !isEdit,
+            placeholder: allocationLoading
+                ? "Loading trip allocations..."
+                : tripAllocationOptions.length
+                    ? "Select trip allocation"
+                    : "No trip allocation available",
+            disabled:
+                isView ||
+                allocationLoading ||
+                !String(form.transportOrderNumber || form.tripNumber || "").trim() ||
+                (
+                    isEdit &&
+                    Boolean(
+                        String(
+                            form.allocationVoucherNumber ||
+                            form.tripAllocationVoucherNumber ||
+                            ""
+                        ).trim()
+                    )
+                ),
         },
         {
             key: "lrDate",

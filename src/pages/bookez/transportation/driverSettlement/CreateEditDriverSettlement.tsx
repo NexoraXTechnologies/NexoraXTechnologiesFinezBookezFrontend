@@ -274,6 +274,33 @@ const recordMatchesDriver = (record: any, driver: any) => {
     return false;
 };
 
+// ⭐ YELLOW STAR: ADDED — RESOLVE THE PARENT TRANSPORT ORDER WITHOUT REPLACING IT WITH THE ALLOCATION NUMBER
+const getTransportOrderNumberFromAny = (record: any) =>
+    cleanText(
+        record?.transportOrder?.transportOrderNumber ||
+        record?.transportOrderNumber ||
+        record?.orderNumber ||
+        record?.tOrderNumber ||
+        record?.tripId ||
+        (!record?.transportOrder ? record?.tripNumber : "") ||
+        ""
+    );
+
+// ⭐ YELLOW STAR: ADDED — EXACT PHYSICAL TRIP / VEHICLE REFERENCE
+// Trip Allocation API currently exposes the allocation voucher in `tripNumber`
+// (example TA-49) while LR / Trip Expense preserve it as `allocationVoucherNumber`.
+const getAllocationVoucherFromAny = (record: any) =>
+    cleanText(
+        record?.allocationVoucherNumber ||
+        record?.tripAllocationVoucherNumber ||
+        record?.allocationNumber ||
+        record?.allocationVoucher ||
+        record?.tripAllocation?.tripNumber ||
+        record?.allocation?.tripNumber ||
+        (record?.transportOrder ? record?.tripNumber : "") ||
+        ""
+    );
+
 const findTransportOrderForTrip = (orders: any[] = [], tripId = "") => {
     const normalizedTrip = normalizeText(tripId);
 
@@ -287,7 +314,6 @@ const findTransportOrderForTrip = (orders: any[] = [], tripId = "") => {
                 item?.tOrderNumber,
                 item?.tripNumber,
                 item?.tripId,
-                item?.allocationVoucherNumber,
                 item?.voucherNumber,
             ]
                 .map((value) => normalizeText(value))
@@ -298,75 +324,126 @@ const findTransportOrderForTrip = (orders: any[] = [], tripId = "") => {
     );
 };
 
-const findAllocationForTrip = (allocations: any[] = [], tripId = "") => {
-    const normalizedTrip = normalizeText(tripId);
+// ⭐ YELLOW STAR: UPDATED — NEW DATA MUST MATCH ORDER + ALLOCATION WITH AND LOGIC.
+// When allocationVoucherNumber is empty, order-only lookup is retained strictly
+// for legacy records that never stored an allocation reference.
+const findAllocationForTrip = (
+    allocations: any[] = [],
+    transportOrderNumber = "",
+    allocationVoucherNumber = ""
+) => {
+    const normalizedOrder = normalizeText(transportOrderNumber);
+    const normalizedAllocation = normalizeText(allocationVoucherNumber);
 
-    if (!normalizedTrip) return null;
+    if (!normalizedOrder && !normalizedAllocation) return null;
 
     return (
-        allocations.find((item: any) => {
-            const candidates = [
-                item?.tripAllocationVoucherNumber,
-                item?.tripNumber,
-                item?.voucherNumber,
-                item?.allocationNumber,
-                item?.transportOrder?.transportOrderNumber,
-            ]
-                .map((value) => normalizeText(value))
-                .filter(Boolean);
+        (Array.isArray(allocations) ? allocations : []).find((item: any) => {
+            const itemOrder = normalizeText(
+                item?.transportOrder?.transportOrderNumber ||
+                item?.transportOrderNumber ||
+                ""
+            );
 
-            return candidates.includes(normalizedTrip);
+            const itemAllocation = normalizeText(
+                getAllocationVoucherFromAny(item)
+            );
+
+            if (normalizedAllocation) {
+                return (
+                    (!normalizedOrder || itemOrder === normalizedOrder) &&
+                    itemAllocation === normalizedAllocation
+                );
+            }
+
+            return Boolean(normalizedOrder && itemOrder === normalizedOrder);
         }) || null
     );
 };
 
-const findTripExpenseForTrip = (tripExpenses: any[] = [], tripId = "") => {
-    const normalizedTrip = normalizeText(tripId);
+// ⭐ YELLOW STAR: UPDATED — DO NOT FALL BACK TO ANOTHER ORDER LR/EXPENSE
+// WHEN AN ALLOCATION NUMBER WAS SUPPLIED BUT DID NOT MATCH.
+const findTripExpenseForTrip = (
+    tripExpenses: any[] = [],
+    transportOrderNumber = "",
+    allocationVoucherNumber = ""
+) => {
+    const normalizedOrder = normalizeText(transportOrderNumber);
+    const normalizedAllocation = normalizeText(allocationVoucherNumber);
 
-    if (!normalizedTrip) return null;
+    if (!normalizedOrder && !normalizedAllocation) return null;
 
     return (
-        tripExpenses.find((item: any) => {
-            const candidates = [
-                item?.tripId,
-                item?.tripNumber,
-                item?.transportOrderNumber,
-                item?.allocationVoucherNumber,
-                item?.tripAllocationVoucherNumber,
-                item?.voucherNumber,
-            ]
-                .map((value) => normalizeText(value))
-                .filter(Boolean);
+        (Array.isArray(tripExpenses) ? tripExpenses : []).find((item: any) => {
+            const itemOrder = normalizeText(
+                item?.transportOrderNumber ||
+                item?.tripId ||
+                item?.tripNumber ||
+                item?.transportOrder?.transportOrderNumber ||
+                ""
+            );
 
-            return candidates.includes(normalizedTrip);
+            const itemAllocation = normalizeText(
+                item?.allocationVoucherNumber ||
+                item?.tripAllocationVoucherNumber ||
+                ""
+            );
+
+            if (normalizedAllocation) {
+                return (
+                    (!normalizedOrder || itemOrder === normalizedOrder) &&
+                    itemAllocation === normalizedAllocation
+                );
+            }
+
+            return Boolean(normalizedOrder && itemOrder === normalizedOrder);
         }) || null
     );
 };
 
-const findLREntryForTrip = (lrEntries: any[] = [], tripId = "") => {
-    const normalizedTrip = normalizeText(tripId);
+const findLREntryForTrip = (
+    lrEntries: any[] = [],
+    transportOrderNumber = "",
+    allocationVoucherNumber = ""
+) => {
+    const normalizedOrder = normalizeText(transportOrderNumber);
+    const normalizedAllocation = normalizeText(allocationVoucherNumber);
 
-    if (!normalizedTrip) return null;
+    if (!normalizedOrder && !normalizedAllocation) return null;
 
     return (
-        lrEntries.find((item: any) => {
-            const candidates = [
-                item?.tripNumber,
-                item?.transportOrderNumber,
-                item?.orderNumber,
-                item?.transportOrder?.transportOrderNumber,
-                item?.transportOrder?.orderNumber,
-                item?.transportOrder?.voucherNumber,
-                item?.voucherNumber,
-            ]
-                .map((value) => normalizeText(value))
-                .filter(Boolean);
+        (Array.isArray(lrEntries) ? lrEntries : []).find((item: any) => {
+            const itemOrder = normalizeText(
+                item?.transportOrderNumber ||
+                item?.tripNumber ||
+                item?.orderNumber ||
+                item?.transportOrder?.transportOrderNumber ||
+                item?.transportOrder?.orderNumber ||
+                item?.transportOrder?.voucherNumber ||
+                ""
+            );
 
-            return candidates.includes(normalizedTrip);
+            const itemAllocation = normalizeText(
+                item?.allocationVoucherNumber ||
+                item?.tripAllocationVoucherNumber ||
+                ""
+            );
+
+            if (normalizedAllocation) {
+                return (
+                    (!normalizedOrder || itemOrder === normalizedOrder) &&
+                    itemAllocation === normalizedAllocation
+                );
+            }
+
+            return Boolean(normalizedOrder && itemOrder === normalizedOrder);
         }) || null
     );
 };
 
+// ⭐ YELLOW STAR: UPDATED — EACH DRIVER OPTION NOW REPRESENTS AN EXACT VEHICLE TRIP.
+// `selectedTripId` still remains the parent Transport Order. The option also
+// carries `allocationVoucherNumber` so TO-47 + TA-49 and TO-47 + TA-50 stay separate.
 const buildOrderOptionsForDriver = ({
     selectedDriver,
     activeAllocations = [],
@@ -378,27 +455,79 @@ const buildOrderOptionsForDriver = ({
 
     const optionMap = new Map<string, any>();
 
-    const addOption = (transportOrderNumber: string, base: any = {}) => {
-        const value = cleanText(transportOrderNumber);
+    const addOption = (
+        transportOrderNumber: string,
+        allocationVoucherNumber = "",
+        base: any = {}
+    ) => {
+        const orderNumber = cleanText(transportOrderNumber);
+        let allocationNumber = cleanText(
+            allocationVoucherNumber ||
+            getAllocationVoucherFromAny(base?.allocation) ||
+            base?.tripExpense?.allocationVoucherNumber ||
+            base?.tripExpense?.tripAllocationVoucherNumber ||
+            base?.lrEntry?.allocationVoucherNumber ||
+            base?.lrEntry?.tripAllocationVoucherNumber ||
+            ""
+        );
 
-        if (!value) return;
+        if (!orderNumber) return;
+
+        // ⭐ YELLOW STAR: ADDED — DO NOT "UPGRADE" A GENUINE LEGACY LR/EXPENSE
+        // TO AN ARBITRARY ALLOCATION JUST BECAUSE THE SAME ORDER NOW HAS TA-* RECORDS.
+        const keepLegacyOrderOnly =
+            !allocationNumber &&
+            !base?.allocation &&
+            Boolean(base?.tripExpense || base?.lrEntry);
 
         const allocation =
             base.allocation ||
-            findAllocationForTrip(activeAllocations, value);
+            findAllocationForTrip(
+                activeAllocations,
+                orderNumber,
+                allocationNumber
+            );
+
+        if (!allocationNumber && !keepLegacyOrderOnly) {
+            allocationNumber = getAllocationVoucherFromAny(allocation);
+        }
 
         const tripExpense =
             base.tripExpense ||
-            findTripExpenseForTrip(tripExpenses, value);
+            findTripExpenseForTrip(
+                tripExpenses,
+                orderNumber,
+                allocationNumber
+            );
+
+        if (!allocationNumber && !keepLegacyOrderOnly) {
+            allocationNumber = cleanText(
+                tripExpense?.allocationVoucherNumber ||
+                tripExpense?.tripAllocationVoucherNumber ||
+                ""
+            );
+        }
 
         const transportOrder =
             base.transportOrder ||
             allocation?.transportOrder ||
-            findTransportOrderForTrip(transportOrders, value);
+            findTransportOrderForTrip(transportOrders, orderNumber);
 
         const lrEntry =
             base.lrEntry ||
-            findLREntryForTrip(lrEntries, value);
+            findLREntryForTrip(
+                lrEntries,
+                orderNumber,
+                allocationNumber
+            );
+
+        if (!allocationNumber && !keepLegacyOrderOnly) {
+            allocationNumber = cleanText(
+                lrEntry?.allocationVoucherNumber ||
+                lrEntry?.tripAllocationVoucherNumber ||
+                ""
+            );
+        }
 
         const vehicleNo =
             getVehicleNumber(allocation, "") ||
@@ -408,16 +537,29 @@ const buildOrderOptionsForDriver = ({
             "-";
 
         const tripStatus =
-            transportOrder?.tripStatus ||
             allocation?.tripStatus ||
             tripExpense?.tripStatus ||
+            lrEntry?.tripStatus ||
+            transportOrder?.tripStatus ||
             transportOrder?.status ||
             "Open";
 
-        optionMap.set(value, {
-            label: `${value} ${vehicleNo ? ` • ${vehicleNo} (${tripStatus})` : ""
-                }`,
-            value,
+        const identityKey = `${normalizeText(orderNumber)}__${normalizeText(
+            allocationNumber || "__legacy__"
+        )}`;
+
+        const selectionValue = `${orderNumber}__${allocationNumber || "LEGACY"}`;
+
+        optionMap.set(identityKey, {
+            label: allocationNumber
+                ? `${orderNumber} • ${allocationNumber} • ${vehicleNo} (${tripStatus})`
+                : `${orderNumber} • ${vehicleNo} (${tripStatus})`,
+            value: selectionValue,
+
+            // ⭐ YELLOW STAR: ADDED — KEEP BOTH REFERENCES ON THE OPTION
+            transportOrderNumber: orderNumber,
+            allocationVoucherNumber: allocationNumber,
+
             allocation,
             transportOrder,
             tripExpense,
@@ -433,13 +575,16 @@ const buildOrderOptionsForDriver = ({
         if (!isActiveTripRecord(allocation)) continue;
         if (!recordMatchesDriver(allocation, selectedDriver)) continue;
 
-        const transportOrder =
-            allocation?.transportOrder;
+        const transportOrder = allocation?.transportOrder;
 
         const orderNumber =
-            transportOrder?.transportOrderNumber || "";
+            transportOrder?.transportOrderNumber ||
+            getTransportOrderNumberFromAny(allocation);
 
-        addOption(orderNumber, {
+        const allocationNumber =
+            getAllocationVoucherFromAny(allocation);
+
+        addOption(orderNumber, allocationNumber, {
             allocation,
             transportOrder,
         });
@@ -453,18 +598,19 @@ const buildOrderOptionsForDriver = ({
         if (!isActiveTripRecord(expense)) continue;
         if (!recordMatchesDriver(expense, selectedDriver)) continue;
 
+        const orderNumber =
+            getTransportOrderNumberFromAny(expense);
+
+        const allocationNumber =
+            getAllocationVoucherFromAny(expense);
+
         const transportOrder =
             findTransportOrderForTrip(
                 transportOrders,
-                expense?.transportOrderNumber
+                orderNumber
             );
 
-        const orderNumber =
-            expense?.transportOrderNumber ||
-            transportOrder?.transportOrderNumber ||
-            "";
-
-        addOption(orderNumber, {
+        addOption(orderNumber, allocationNumber, {
             tripExpense: expense,
             transportOrder,
         });
@@ -475,33 +621,43 @@ const buildOrderOptionsForDriver = ({
     ========================================================== */
 
     for (const lr of lrEntries || []) {
+        const orderNumber =
+            getTransportOrderNumberFromAny(lr);
+
+        const allocationNumber =
+            getAllocationVoucherFromAny(lr);
+
+        if (!orderNumber) continue;
+
         const transportOrder =
             lr?.transportOrder ||
             findTransportOrderForTrip(
                 transportOrders,
-                lr?.transportOrderNumber
+                orderNumber
             );
 
-        const orderNumber =
-            lr?.transportOrderNumber ||
-            transportOrder?.transportOrderNumber ||
-            "";
-
-        if (!orderNumber) continue;
-
         const matchedAllocation =
-            findAllocationForTrip(activeAllocations, orderNumber);
+            findAllocationForTrip(
+                activeAllocations,
+                orderNumber,
+                allocationNumber
+            );
 
         const matchedExpense =
-            findTripExpenseForTrip(tripExpenses, orderNumber);
+            findTripExpenseForTrip(
+                tripExpenses,
+                orderNumber,
+                allocationNumber
+            );
 
         const matchedDriver =
+            recordMatchesDriver(lr, selectedDriver) ||
             recordMatchesDriver(matchedAllocation, selectedDriver) ||
             recordMatchesDriver(matchedExpense, selectedDriver);
 
         if (!matchedDriver) continue;
 
-        addOption(orderNumber, {
+        addOption(orderNumber, allocationNumber, {
             lrEntry: lr,
             allocation: matchedAllocation,
             tripExpense: matchedExpense,
@@ -509,9 +665,17 @@ const buildOrderOptionsForDriver = ({
         });
     }
 
-    return Array.from(optionMap.values()).sort((a, b) =>
-        a.value.localeCompare(b.value)
-    );
+    return Array.from(optionMap.values()).sort((a, b) => {
+        const orderCompare = String(a?.transportOrderNumber || "").localeCompare(
+            String(b?.transportOrderNumber || "")
+        );
+
+        if (orderCompare !== 0) return orderCompare;
+
+        return String(a?.allocationVoucherNumber || "").localeCompare(
+            String(b?.allocationVoucherNumber || "")
+        );
+    });
 };
 
 /* ===================================================
@@ -690,6 +854,15 @@ const mapSelectionToTripDetails = ({
         lrDate: lrEntry?.lrDate || "",
 
         tripNo: lrEntry?.tripNumber || "-",
+
+        // ⭐ YELLOW STAR: ADDED — EXACT PHYSICAL TRIP / VEHICLE REFERENCE
+        allocationVoucherNumber:
+            lrEntry?.allocationVoucherNumber ||
+            lrEntry?.tripAllocationVoucherNumber ||
+            tripExpense?.allocationVoucherNumber ||
+            tripExpense?.tripAllocationVoucherNumber ||
+            getAllocationVoucherFromAny(allocation) ||
+            "",
 
         tripDate:
             lrEntry?.loading?.loadingDateTime || "",
@@ -958,6 +1131,14 @@ const mapEditRecordToTripDetails = (record: any) => {
 
     return {
         tripNo: lr?.tripNumber || record?.transportOrderNumber || "-",
+
+        // ⭐ YELLOW STAR: ADDED — PRESERVE SAVED ALLOCATION IN EDIT / VIEW MODE
+        allocationVoucherNumber:
+            lr?.allocationVoucherNumber ||
+            record?.allocationVoucherNumber ||
+            record?.tripAllocationVoucherNumber ||
+            "",
+
         lrNo: lr?.lrNumber || "-",
         tripDate: lr?.tripDate || "",
         lrDate: lr?.lrDate || "",
@@ -1084,6 +1265,10 @@ const CreateEditDriverSettlement = ({
 
     const [selectedDriverId, setSelectedDriverId] = useState("");
     const [selectedTripId, setSelectedTripId] = useState("");
+
+    // ⭐ YELLOW STAR: ADDED — KEEP TRANSPORT ORDER AS PARENT AND ALLOCATION AS EXACT VEHICLE TRIP
+    const [selectedAllocationVoucherNumber, setSelectedAllocationVoucherNumber] = useState("");
+
     const { accounts = [], } = useSelector((state: any) => state.accountMaster || {});
 
     const [driverDetail, setDriverDetail] = useState<any>({
@@ -1483,6 +1668,16 @@ const CreateEditDriverSettlement = ({
                 );
                 setSelectedTripId(cleanText(record?.transportOrderNumber));
 
+                // ⭐ YELLOW STAR: ADDED — OLD SETTLEMENTS MAY NOT HAVE THIS FIELD
+                setSelectedAllocationVoucherNumber(
+                    cleanText(
+                        record?.allocationVoucherNumber ||
+                        record?.tripAllocationVoucherNumber ||
+                        record?.lrDetails?.allocationVoucherNumber ||
+                        ""
+                    )
+                );
+
                 // ⭐ ADDED — PREFILL SAVED MARKET VENDOR DETAILS
                 setVendorCode(cleanText(record?.vendorCode));
                 setVendorName(cleanText(record?.vendorName));
@@ -1571,25 +1766,89 @@ const CreateEditDriverSettlement = ({
     const selectedDriverOption =
         driverOptions.find((item: any) => item.value === selectedDriverId) || null;
 
-    const selectedOrderOption =
-        orderOptions.find((item: any) => item.value === selectedTripId) || null;
+    // ⭐ YELLOW STAR: UPDATED — SELECT THE OPTION BY BOTH ORDER + ALLOCATION.
+    // Legacy records without allocationVoucherNumber retain the old order-only behavior.
+    const selectedOrderOption = useMemo(() => {
+        const normalizedOrder = normalizeText(selectedTripId);
+        const normalizedAllocation = normalizeText(selectedAllocationVoucherNumber);
+
+        if (!normalizedOrder) return null;
+
+        if (normalizedAllocation) {
+            return (
+                orderOptions.find(
+                    (item: any) =>
+                        normalizeText(item?.transportOrderNumber) === normalizedOrder &&
+                        normalizeText(item?.allocationVoucherNumber) === normalizedAllocation
+                ) || null
+            );
+        }
+
+        return (
+            orderOptions.find(
+                (item: any) =>
+                    normalizeText(item?.transportOrderNumber) === normalizedOrder &&
+                    !cleanText(item?.allocationVoucherNumber)
+            ) ||
+            orderOptions.find(
+                (item: any) =>
+                    normalizeText(item?.transportOrderNumber) === normalizedOrder
+            ) ||
+            null
+        );
+    }, [
+        orderOptions,
+        selectedTripId,
+        selectedAllocationVoucherNumber,
+    ]);
 
     useEffect(() => {
         if (isEditMode) return;
 
-        if (
-            selectedTripId &&
-            !orderOptions.some((option: any) => option.value === selectedTripId)
-        ) {
+        if (!selectedTripId) return;
+
+        const hasExactOption = orderOptions.some((option: any) => {
+            const orderMatches =
+                normalizeText(option?.transportOrderNumber) ===
+                normalizeText(selectedTripId);
+
+            if (!orderMatches) return false;
+
+            if (selectedAllocationVoucherNumber) {
+                return (
+                    normalizeText(option?.allocationVoucherNumber) ===
+                    normalizeText(selectedAllocationVoucherNumber)
+                );
+            }
+
+            return true;
+        });
+
+        if (!hasExactOption) {
             setSelectedTripId("");
+            setSelectedAllocationVoucherNumber("");
         }
-    }, [selectedTripId, orderOptions, isEditMode]);
+    }, [
+        selectedTripId,
+        selectedAllocationVoucherNumber,
+        orderOptions,
+        isEditMode,
+    ]);
 
     const selectedAllocation = useMemo(
         () =>
             selectedOrderOption?.allocation ||
-            findAllocationForTrip(activeAllocations, selectedTripId),
-        [selectedOrderOption, activeAllocations, selectedTripId]
+            findAllocationForTrip(
+                activeAllocations,
+                selectedTripId,
+                selectedAllocationVoucherNumber
+            ),
+        [
+            selectedOrderOption,
+            activeAllocations,
+            selectedTripId,
+            selectedAllocationVoucherNumber,
+        ]
     );
 
     const selectedTransportOrder = useMemo(
@@ -1603,15 +1862,33 @@ const CreateEditDriverSettlement = ({
     const selectedTripExpense = useMemo(
         () =>
             selectedOrderOption?.tripExpense ||
-            findTripExpenseForTrip(tripExpenses, selectedTripId),
-        [selectedOrderOption, tripExpenses, selectedTripId]
+            findTripExpenseForTrip(
+                tripExpenses,
+                selectedTripId,
+                selectedAllocationVoucherNumber
+            ),
+        [
+            selectedOrderOption,
+            tripExpenses,
+            selectedTripId,
+            selectedAllocationVoucherNumber,
+        ]
     );
 
     const selectedLREntry = useMemo(
         () =>
             selectedOrderOption?.lrEntry ||
-            findLREntryForTrip(lrEntries, selectedTripId),
-        [selectedOrderOption, lrEntries, selectedTripId]
+            findLREntryForTrip(
+                lrEntries,
+                selectedTripId,
+                selectedAllocationVoucherNumber
+            ),
+        [
+            selectedOrderOption,
+            lrEntries,
+            selectedTripId,
+            selectedAllocationVoucherNumber,
+        ]
     );
 
     // ⭐ ADDED — MARKET / HIRED VEHICLE PAYMENT
@@ -1634,13 +1911,14 @@ const CreateEditDriverSettlement = ({
     const isMarketVehicle = normalizeText(ownershipType) === "hired";
     const showMarketVendorPayment = isMarketVehicle;
 
+    // ⭐ YELLOW STAR: UPDATED — SAME ORDER CAN SWITCH BETWEEN DIFFERENT ALLOCATIONS
     useEffect(() => {
         if (isMarketVehicle) return;
 
         setVendorCode("");
         setVendorName("");
         setVendorAmount("");
-    }, [isMarketVehicle, selectedTripId]);
+    }, [isMarketVehicle, selectedTripId, selectedAllocationVoucherNumber]);
 
     const liveSettlementData = useMemo(
         () =>
@@ -1695,10 +1973,11 @@ const CreateEditDriverSettlement = ({
         return liveSettlementData;
     }, [isEditMode, editRecord, salary, incentives, liveSettlementData]);
 
+    // ⭐ YELLOW STAR: UPDATED — RESET EDITED ROWS WHEN THE EXACT ALLOCATION CHANGES TOO
     useEffect(() => {
         setExpenseRowEdits({});
         setAdvanceRowEdits({});
-    }, [selectedTripId, editRecord]);
+    }, [selectedTripId, selectedAllocationVoucherNumber, editRecord]);
 
     const patchExpenseRow = (id: string, patch: any) => {
         if (isView) return;
@@ -1742,6 +2021,10 @@ const CreateEditDriverSettlement = ({
 
         setSelectedDriverId(driverId || "");
         setSelectedTripId("");
+
+        // ⭐ YELLOW STAR: ADDED — DRIVER CHANGE MUST CLEAR THE EXACT ALLOCATION TOO
+        setSelectedAllocationVoucherNumber("");
+
         setDriverVehicleMaster({
             code: "",
             name: "",
@@ -1839,14 +2122,52 @@ const CreateEditDriverSettlement = ({
         }
     };
 
-    const handleOrderSelect = (orderNumber: string) => {
+    // ⭐ YELLOW STAR: UPDATED — OPTION CARRIES BOTH ORDER + ALLOCATION.
+    // `selectedTripId` remains TO-* for existing business/reporting behavior.
+    const handleOrderSelect = (selectedOption: any) => {
         if (isView) return;
 
-        const selectedOption = orderOptions.find((item: any) => item.value === orderNumber);
-        const allocation = selectedOption?.allocation || findAllocationForTrip(activeAllocations, orderNumber);
-        const transportOrder = selectedOption?.transportOrder || allocation?.transportOrder || findTransportOrderForTrip(transportOrders, orderNumber);
-        const vehicleSelection = allocation?.vehicleSelection || transportOrder?.vehicleSelection || {};
-        const vehicleRawRecord = vehicleSelection?.rawRecord || {};
+        const orderNumber = cleanText(
+            selectedOption?.transportOrderNumber ||
+            selectedOption?.transportOrder?.transportOrderNumber ||
+            ""
+        );
+
+        const allocationVoucherNumber = cleanText(
+            selectedOption?.allocationVoucherNumber ||
+            getAllocationVoucherFromAny(selectedOption?.allocation) ||
+            ""
+        );
+
+        if (!orderNumber) {
+            setSelectedTripId("");
+            setSelectedAllocationVoucherNumber("");
+            return;
+        }
+
+        const allocation =
+            selectedOption?.allocation ||
+            findAllocationForTrip(
+                activeAllocations,
+                orderNumber,
+                allocationVoucherNumber
+            );
+
+        const transportOrder =
+            selectedOption?.transportOrder ||
+            allocation?.transportOrder ||
+            findTransportOrderForTrip(
+                transportOrders,
+                orderNumber
+            );
+
+        const vehicleSelection =
+            allocation?.vehicleSelection ||
+            transportOrder?.vehicleSelection ||
+            {};
+
+        const vehicleRawRecord =
+            vehicleSelection?.rawRecord || {};
 
         const selectedVendorCode = cleanText(
             vehicleSelection?.vendorCode ||
@@ -1877,7 +2198,11 @@ const CreateEditDriverSettlement = ({
             ),
         };
 
-        setSelectedTripId(orderNumber || "");
+        setSelectedTripId(orderNumber);
+
+        // ⭐ YELLOW STAR: ADDED — EXACT PHYSICAL VEHICLE TRIP
+        setSelectedAllocationVoucherNumber(allocationVoucherNumber);
+
         setTripVehicleMaster(selectedVehicleMaster);
         setVendorCode(selectedVendorCode);
         setVendorName(selectedVendorName);
@@ -2082,7 +2407,7 @@ const CreateEditDriverSettlement = ({
         }
 
         if (!selectedTripId) {
-            toast.warn("Please select order / trip");
+            toast.warn("Please select order / trip allocation");
             return;
         }
 
@@ -2177,8 +2502,25 @@ const CreateEditDriverSettlement = ({
                 selectedAllocation?.transportOrder?.transportOrderNumber ||
                 selectedTripId;
 
+            // ⭐ YELLOW STAR: ADDED — EXACT PHYSICAL VEHICLE TRIP REFERENCE
+            // If this is present, every new lookup must use:
+            // transportOrderNumber AND allocationVoucherNumber.
+            const allocationVoucherNumber = cleanText(
+                selectedAllocationVoucherNumber ||
+                tripDetails?.allocationVoucherNumber ||
+                selectedTripExpense?.allocationVoucherNumber ||
+                selectedTripExpense?.tripAllocationVoucherNumber ||
+                selectedLREntry?.allocationVoucherNumber ||
+                selectedLREntry?.tripAllocationVoucherNumber ||
+                getAllocationVoucherFromAny(selectedAllocation) ||
+                ""
+            );
+
             const payload: any = {
                 transportOrderNumber,
+
+                // ⭐ YELLOW STAR: ADDED
+                allocationVoucherNumber,
 
                 driverCode: driverAccountCode,
 
@@ -2217,6 +2559,10 @@ const CreateEditDriverSettlement = ({
                     lrNumber: tripDetails?.lrNo || "",
                     lrDate: tripDetails?.lrDate || null,
                     tripNumber: tripDetails?.tripNo || "",
+
+                    // ⭐ YELLOW STAR: ADDED — KEEP THE LR LINKED TO THE SAME ALLOCATION
+                    allocationVoucherNumber,
+
                     tripDate: tripDetails?.tripDate || null,
                     driverName: tripDetails?.driverName || "",
                     tripStatus: tripDetails?.tripStatus || "",
@@ -2533,6 +2879,9 @@ const CreateEditDriverSettlement = ({
 
                         transportOrderNumber,
 
+                        // ⭐ YELLOW STAR: ADDED — ACCOUNTING RECORD KEEPS EXACT VEHICLE TRIP
+                        allocationVoucherNumber,
+
                         trip_order: transportOrderNumber,
                         lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
                         driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
@@ -2649,6 +2998,9 @@ const CreateEditDriverSettlement = ({
                             settlementNumber,
 
                         transportOrderNumber,
+
+                        // ⭐ YELLOW STAR: ADDED — ACCOUNTING RECORD KEEPS EXACT VEHICLE TRIP
+                        allocationVoucherNumber,
 
                         trip_order: transportOrderNumber,
                         lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
@@ -2885,13 +3237,20 @@ const CreateEditDriverSettlement = ({
 
                         <div>
                             <label className="mb-1 block text-sm font-medium text-card-foreground">
-                                Order / Trip <span className="text-danger">*</span>
+                                Order / Trip Allocation <span className="text-danger">*</span>
                             </label>
 
                             <Select
                                 value={
                                     isEditMode
-                                        ? { label: selectedTripId, value: selectedTripId }
+                                        ? {
+                                            label: selectedAllocationVoucherNumber
+                                                ? `${selectedTripId} • ${selectedAllocationVoucherNumber}`
+                                                : selectedTripId,
+                                            value: selectedAllocationVoucherNumber
+                                                ? `${selectedTripId}__${selectedAllocationVoucherNumber}`
+                                                : selectedTripId,
+                                        }
                                         : selectedOrderOption
                                 }
                                 options={orderOptions}
@@ -2899,13 +3258,15 @@ const CreateEditDriverSettlement = ({
                                     !selectedDriverId
                                         ? "Select driver first"
                                         : pageLoading
-                                            ? "Loading orders..."
-                                            : "Select Order / Trip"
+                                            ? "Loading trips..."
+                                            : "Select Order / Trip Allocation"
                                 }
                                 isDisabled={!selectedDriverId || pageLoading || isEditMode}
                                 isSearchable
+
+                                // ⭐ YELLOW STAR: UPDATED — PASS THE FULL OPTION SO BOTH REFERENCES SURVIVE
                                 onChange={(option: any) =>
-                                    handleOrderSelect(option?.value || "")
+                                    handleOrderSelect(option)
                                 }
                                 classNamePrefix="rs"
                                 classNames={selectClassNames}
@@ -2969,7 +3330,7 @@ const CreateEditDriverSettlement = ({
                                 <EmptyHint>Loading settlement details...</EmptyHint>
                             ) : !selectedTripId ? (
                                 <EmptyHint>
-                                    Select order / trip to view autofilled details.
+                                    Select order / trip allocation to view autofilled details.
                                 </EmptyHint>
                             ) : !tripDetails ? (
                                 <EmptyHint>No trip details available.</EmptyHint>
@@ -2978,6 +3339,12 @@ const CreateEditDriverSettlement = ({
                                     <DetailCell
                                         label="Order / Trip No"
                                         value={tripDetails.tripNo}
+                                    />
+
+                                    {/* ⭐ YELLOW STAR: ADDED — SHOW EXACT TRIP ALLOCATION */}
+                                    <DetailCell
+                                        label="Trip Allocation"
+                                        value={tripDetails.allocationVoucherNumber || "-"}
                                     />
 
                                     <DetailCell label="LR No" value={tripDetails.lrNo} />
@@ -3053,7 +3420,7 @@ const CreateEditDriverSettlement = ({
                             {fetchingEdit ? (
                                 <EmptyHint>Loading settlement details...</EmptyHint>
                             ) : !selectedTripId ? (
-                                <EmptyHint>Select order / trip to view expenses.</EmptyHint>
+                                <EmptyHint>Select order / trip allocation to view expenses.</EmptyHint>
                             ) : !settlementData.expenseRows.length ? (
                                 <EmptyHint>No expense entries in this trip.</EmptyHint>
                             ) : (
@@ -3141,7 +3508,7 @@ const CreateEditDriverSettlement = ({
                             {fetchingEdit ? (
                                 <EmptyHint>Loading settlement details...</EmptyHint>
                             ) : !selectedTripId ? (
-                                <EmptyHint>Select order / trip to view advances.</EmptyHint>
+                                <EmptyHint>Select order / trip allocation to view advances.</EmptyHint>
                             ) : !settlementData.advanceRows.length ? (
                                 <EmptyHint>No advances recorded for this trip.</EmptyHint>
                             ) : (

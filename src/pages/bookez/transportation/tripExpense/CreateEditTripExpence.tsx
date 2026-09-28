@@ -34,6 +34,7 @@ import {
     DRIVER_VEHICLE_STATUS_OPTIONS,
     VEHICLE_STATUS,
     getActiveTripAllocations,
+    getAllTripAllocation,
     getVehicleMasterByVoucher,
     getVehicleVoucherFromTripExpense,
     isDriverSelectableStatus,
@@ -538,13 +539,123 @@ const resolveFreightAmount = ({ lrEntry, allocation, tripExpense, transportOrder
     return [...lrAmounts, ...allocationAmounts, ...expenseAmounts, ...orderAmounts].map(toPositiveAmount).find((amount) => amount > 0) || 0;
 };
 
-const findTripRelatedRecord = (records: any[], matchValues: any[] = []) => {
-    const matchKeys = new Set(matchValues.map(normalizeTripDocKey).filter(Boolean));
-    if (!matchKeys.size) return null;
-    return (records || []).find((item: any) => {
-        const values = [item?.tripId, item?.tripNumber, item?.transportOrderNumber, item?.allocationVoucherNumber, item?.tripAllocationVoucherNumber, item?.voucherNumber, item?.lrNumber, item?.lrVoucherNumber, item?.transportOrder?.transportOrderNumber, item?.transportOrder?.voucherNumber, getAllocationVoucher(item)].map(normalizeTripDocKey).filter(Boolean);
-        return values.some((value) => matchKeys.has(value));
-    }) || null;
+// const findTripRelatedRecord = (records: any[], matchValues: any[] = []) => {
+//     const matchKeys = new Set(matchValues.map(normalizeTripDocKey).filter(Boolean));
+//     if (!matchKeys.size) return null;
+//     return (records || []).find((item: any) => {
+//         const values = [item?.tripId, item?.tripNumber, item?.transportOrderNumber, item?.allocationVoucherNumber, item?.tripAllocationVoucherNumber, item?.voucherNumber, item?.lrNumber, item?.lrVoucherNumber, item?.transportOrder?.transportOrderNumber, item?.transportOrder?.voucherNumber, getAllocationVoucher(item)].map(normalizeTripDocKey).filter(Boolean);
+//         return values.some((value) => matchKeys.has(value));
+//     }) || null;
+// };
+
+// ⭐ YELLOW STAR: ADDED
+const getAllocationTransportOrderNumber = (item: any = {}) =>
+    item?.transportOrder?.transportOrderNumber ||
+    item?.transportOrderNumber ||
+    item?.transportOrder?.voucherNumber ||
+    "";
+
+// ⭐ YELLOW STAR: ADDED
+const getLrTransportOrderNumber = (item: any = {}) =>
+    item?.transportOrderNumber ||
+    item?.tripNumber ||
+    item?.tripId ||
+    item?.transportOrder?.transportOrderNumber ||
+    "";
+
+// ⭐ YELLOW STAR: ADDED
+const getLrAllocationVoucherNumber = (item: any = {}) =>
+    item?.allocationVoucherNumber ||
+    item?.tripAllocationVoucherNumber ||
+    "";
+
+// ⭐ YELLOW STAR: ADDED
+const findAllocationForTransportTrip = (
+    records: any[] = [],
+    transportOrderNumber = "",
+    allocationVoucherNumber = ""
+) => {
+    const orderKey = normalizeTripDocKey(transportOrderNumber);
+    const allocationKey = normalizeTripDocKey(allocationVoucherNumber);
+
+    if (allocationKey) {
+        return (
+            (records || []).find((item: any) => {
+                const itemAllocationKey = normalizeTripDocKey(
+                    getAllocationVoucher(item)
+                );
+
+                const itemOrderKey = normalizeTripDocKey(
+                    getAllocationTransportOrderNumber(item)
+                );
+
+                if (itemAllocationKey !== allocationKey) {
+                    return false;
+                }
+
+                // ⭐ YELLOW STAR: UPDATED
+                return !orderKey || itemOrderKey === orderKey;
+            }) || null
+        );
+    }
+
+    if (!orderKey) {
+        return null;
+    }
+
+    // ⭐ YELLOW STAR: UPDATED
+    // Legacy Trip Expense records without allocation reference keep Order-only lookup.
+    return (
+        (records || []).find(
+            (item: any) =>
+                normalizeTripDocKey(
+                    getAllocationTransportOrderNumber(item)
+                ) === orderKey
+        ) || null
+    );
+};
+
+// ⭐ YELLOW STAR: ADDED
+const findLrsForTransportTrip = (
+    records: any[] = [],
+    transportOrderNumber = "",
+    allocationVoucherNumber = ""
+) => {
+    const orderKey = normalizeTripDocKey(transportOrderNumber);
+    const allocationKey = normalizeTripDocKey(allocationVoucherNumber);
+
+    if (allocationKey) {
+        // ⭐ YELLOW STAR: UPDATED
+        // New data: Transport Order AND Trip Allocation must both match.
+        // Never fall back to Order-only when allocation was supplied.
+        return (records || []).filter((item: any) => {
+            const itemOrderKey = normalizeTripDocKey(
+                getLrTransportOrderNumber(item)
+            );
+
+            const itemAllocationKey = normalizeTripDocKey(
+                getLrAllocationVoucherNumber(item)
+            );
+
+            return (
+                itemAllocationKey === allocationKey &&
+                (!orderKey || itemOrderKey === orderKey)
+            );
+        });
+    }
+
+    if (!orderKey) {
+        return [];
+    }
+
+    // ⭐ YELLOW STAR: UPDATED
+    // Legacy records without allocation reference keep existing Order-only lookup.
+    return (records || []).filter(
+        (item: any) =>
+            normalizeTripDocKey(
+                getLrTransportOrderNumber(item)
+            ) === orderKey
+    );
 };
 
 const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
@@ -577,18 +688,34 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         unwrapThunk(dispatch, getAllLRCollection({ offset: 0, limit: 500 })),
     ]);
 
-    const allocation = findTripRelatedRecord(
-        extractTripRecords(allocationResponse),
-        [tripId, tripExpense?.allocationVoucherNumber, tripExpense?.tripAllocationVoucherNumber]
-    );
-
-    const allocationVoucherNumber = String(
-        (allocation ? getAllocationVoucher(allocation) : "") ||
+    // ⭐ YELLOW STAR: UPDATED
+    const requestedAllocationVoucherNumber = String(
         tripExpense?.allocationVoucherNumber ||
         tripExpense?.tripAllocationVoucherNumber ||
         ""
     ).trim();
-    const lrEntry = findTripRelatedRecord(extractTripRecords(lrResponse), [tripId, allocationVoucherNumber, tripExpense?.lrNumber, tripExpense?.lrVoucherNumber]) || {};
+
+    // ⭐ YELLOW STAR: UPDATED
+    const allocation = findAllocationForTransportTrip(
+        extractTripRecords(allocationResponse),
+        tripId,
+        requestedAllocationVoucherNumber
+    );
+
+    // ⭐ YELLOW STAR: UPDATED
+    const allocationVoucherNumber = String(
+        requestedAllocationVoucherNumber ||
+        (allocation ? getAllocationVoucher(allocation) : "") ||
+        ""
+    ).trim();
+
+    // ⭐ YELLOW STAR: UPDATED
+    const lrEntry =
+        findLrsForTransportTrip(
+            extractTripRecords(lrResponse),
+            tripId,
+            allocationVoucherNumber
+        )[0] || {};
     const vehicleSelection = allocation?.vehicleSelection || allocation?.vehicle || tripExpense?.vehicleSelection || tripExpense?.vehicle || {};
     const allocationOrder = allocation?.transportOrder || {};
     const ownership = normalizeOwnershipType(vehicleSelection?.ownershipType || allocation?.ownershipType || tripExpense?.ownershipType);
@@ -753,6 +880,10 @@ const resolveTripBillingContext = async ({ dispatch, tripExpense }: any) => {
         vendorName,
         tripId,
         transportOrderNumber,
+
+        // ⭐ YELLOW STAR: ADDED — EXACT PHYSICAL TRIP REFERENCE FOR DOWNSTREAM VOUCHERS
+        allocationVoucherNumber,
+
         lrNo,
         driver,
         vehicleCode,
@@ -826,6 +957,10 @@ const buildTransportInvoiceLine = ({ product, freightAmount, context }: any) => 
 
     // ⭐ YELLOW STAR: ADDED — TRANSPORTATION FIELDS MUST BE IN INVOICE BODY
     trip_order: context.transportOrderNumber || "",
+
+    // ⭐ YELLOW STAR: ADDED — KEEP TRANSPORT ORDER AS PARENT, ALLOCATION AS EXACT VEHICLE TRIP
+    allocationVoucherNumber: context.allocationVoucherNumber || "",
+
     lr_no: context.lrNo || "",
     driver: context.driver || "",
     vehicleCode: context.vehicleCode || "",
@@ -836,6 +971,10 @@ const buildTransportInvoiceLine = ({ product, freightAmount, context }: any) => 
 
 const buildTransportationHeaderFields = (context: any) => ({
     transportOrderNumber: context.transportOrderNumber || "",
+
+    // ⭐ YELLOW STAR: ADDED — EXACT VEHICLE/TRIP ALLOCATION REFERENCE
+    allocationVoucherNumber: context.allocationVoucherNumber || "",
+
     trip_order: context.transportOrderNumber || "",
     lr_no: context.lrNo || "",
     driver: context.driver || "",
@@ -1027,6 +1166,10 @@ const createTripVendorAdvancePayment = async ({
         purchaseInvoiceVoucherNumber,
 
         transportOrderNumber: context.transportOrderNumber || "",
+
+        // ⭐ YELLOW STAR: ADDED — PRESERVE EXACT VEHICLE TRIP IN PAYMENT
+        allocationVoucherNumber: context.allocationVoucherNumber || "",
+
         trip_order: context.transportOrderNumber || "",
         lr_no: context.lrNo || "",
         driver: context.driver || "",
@@ -2736,28 +2879,16 @@ const CreateEditTripExpence = () => {
                     lrRes?.data ||
                     [];
 
-                // ⭐ YELLOW STAR: UPDATED — FIND ALL LR RECORDS FOR THIS TRIP / ALLOCATION
-                const matchedLrs = (
+                // ⭐ YELLOW STAR: UPDATED
+                // New records use Order + Allocation with AND logic.
+                // Legacy records without Allocation keep Order-only lookup.
+                const matchedLrs = findLrsForTransportTrip(
                     Array.isArray(lrList)
                         ? lrList
-                        : []
-                ).filter((item: any) => {
-                    const possibleValues = [
-                        item?.tripNumber,
-                        item?.transportOrderNumber,
-                        item?.allocationVoucherNumber,
-                        item?.tripAllocationVoucherNumber,
-                    ]
-                        .map(normalizeTripDocKey)
-                        .filter(Boolean);
-
-                    return possibleValues.includes(
-                        normalizeTripDocKey(tripKey)
-                    ) ||
-                        possibleValues.includes(
-                            normalizeTripDocKey(allocationKey)
-                        );
-                });
+                        : [],
+                    tripKey,
+                    allocationKey
+                );
 
                 // ⭐ YELLOW STAR: ADDED — KEEP FIRST LR FOR ALL EXISTING FORM / SAVE LOGIC
                 const lr = matchedLrs[0] || null;
@@ -2772,15 +2903,14 @@ const CreateEditTripExpence = () => {
                     allocationRes?.data ||
                     [];
 
+                // ⭐ YELLOW STAR: UPDATED
                 const allocation =
-                    findTripRelatedRecord(
+                    findAllocationForTransportTrip(
                         Array.isArray(allocationList)
                             ? allocationList
                             : [],
-                        [
-                            tripKey,
-                            allocationKey,
-                        ]
+                        tripKey,
+                        allocationKey
                     );
 
                 // ⭐ YELLOW STAR: ADDED — RESOLVE DIRECT COMPLETE RULE FROM ACTUAL
@@ -2877,24 +3007,27 @@ const CreateEditTripExpence = () => {
                             lrMatchKeys
                         );
 
-                    // ⭐ YELLOW STAR: KEEP OLD TRIP/ALLOCATION MATCHING FOR EXISTING SINGLE-LR DATA
+                    // ⭐ YELLOW STAR: UPDATED
                     if (!lrEwayRecord && matchedLrs.length === 1) {
+                        const fallbackMatchKeys = allocationKey
+                            ? [
+                                allocationKey,
+                                lrItem?.allocationVoucherNumber,
+                                lrItem?.tripAllocationVoucherNumber,
+                                getAllocationVoucher(allocation),
+                            ]
+                            : [
+                                tripKey,
+                                lrItem?.tripNumber,
+                                lrItem?.transportOrderNumber,
+                                allocation?.transportOrderNumber,
+                                allocation?.transportOrder?.transportOrderNumber,
+                            ];
+
                         lrEwayRecord =
                             findEwayBillForTrip(
                                 ewayRecords,
-                                [
-                                    tripKey,
-                                    allocationKey,
-                                    lrItem?.tripNumber,
-                                    lrItem?.transportOrderNumber,
-                                    lrItem?.allocationVoucherNumber,
-                                    lrItem?.tripAllocationVoucherNumber,
-                                    allocation?.tripNumber,
-                                    allocation?.transportOrderNumber,
-                                    allocation?.transportOrder?.transportOrderNumber,
-                                    allocation?.allocationVoucherNumber,
-                                    getAllocationVoucher(allocation),
-                                ]
+                                fallbackMatchKeys
                             );
                     }
 
@@ -2942,8 +3075,9 @@ const CreateEditTripExpence = () => {
                     status: firstLrDisplay?._ewayBillStatus || "",
                 };
 
-                // ⭐ YELLOW STAR: KEEP EXISTING E-WAY FALLBACK WHEN NO LR RECORD IS AVAILABLE
-                if (!lr) {
+                // ⭐ YELLOW STAR: UPDATED
+                // Do not use Order-only E-Way fallback when an exact allocation was supplied.
+                if (!lr && !allocationKey) {
                     const matchKeys = [
                         tripKey,
                         allocationKey,
@@ -2979,40 +3113,64 @@ const CreateEditTripExpence = () => {
                             )
                             : prev;
 
+                    // ⭐ YELLOW STAR: ADDED
+                    // When a new allocation reference is present, LR/E-Way fields
+                    // must never retain data from another allocation.
+                    const strictAllocationLookup = Boolean(
+                        normalizeTripDocKey(allocationKey)
+                    );
+
                     return {
                         ...baseForm,
 
                         lrNumber:
                             lrNumber ||
-                            baseForm.lrNumber ||
-                            "",
+                            (
+                                strictAllocationLookup
+                                    ? ""
+                                    : baseForm.lrNumber || ""
+                            ),
 
                         lrDate:
                             lrDate ||
-                            baseForm.lrDate ||
-                            "",
+                            (
+                                strictAllocationLookup
+                                    ? ""
+                                    : baseForm.lrDate || ""
+                            ),
 
                         ewayBillNo:
                             ewayDetails.ewayBillNo
                                 ? String(
                                     ewayDetails.ewayBillNo
                                 )
-                                : baseForm.ewayBillNo || "",
+                                : strictAllocationLookup
+                                    ? ""
+                                    : baseForm.ewayBillNo || "",
 
                         ewayBillDate:
                             ewayDetails.ewayBillDate ||
-                            baseForm.ewayBillDate ||
-                            "",
+                            (
+                                strictAllocationLookup
+                                    ? ""
+                                    : baseForm.ewayBillDate || ""
+                            ),
 
                         ewayBillValidUpto:
                             ewayDetails.validUpto ||
-                            baseForm.ewayBillValidUpto ||
-                            "",
+                            (
+                                strictAllocationLookup
+                                    ? ""
+                                    : baseForm.ewayBillValidUpto || ""
+                            ),
 
                         ewayBillStatus:
                             ewayDetails.status ||
-                            baseForm.ewayBillStatus ||
-                            "",
+                            (
+                                strictAllocationLookup
+                                    ? ""
+                                    : baseForm.ewayBillStatus || ""
+                            ),
                     };
                 });
             } catch (error) {
@@ -3032,20 +3190,28 @@ const CreateEditTripExpence = () => {
         [dispatch]
     );
     useEffect(() => {
+        // ⭐ YELLOW STAR: UPDATED
+        const allocationVoucherNumber = String(
+            form.allocationVoucherNumber ||
+            form.tripAllocationVoucherNumber ||
+            ""
+        ).trim();
+
         if (
             !form.tripId?.trim() &&
-            !form.allocationVoucherNumber?.trim()
+            !allocationVoucherNumber
         ) {
             return;
         }
 
         syncLrNumberForTrip(
             form.tripId,
-            form.allocationVoucherNumber
+            allocationVoucherNumber
         );
     }, [
         form.tripId,
         form.allocationVoucherNumber,
+        form.tripAllocationVoucherNumber,
         syncLrNumberForTrip,
     ]);
 
@@ -3058,8 +3224,16 @@ const CreateEditTripExpence = () => {
 
         if (!allocation) return;
 
+        const mappedAllocationForm =
+            mapTripAllocationToExpenseForm(allocation);
+
+        // ⭐ YELLOW STAR: UPDATED
         setForm((prev: any) => ({
-            ...mapTripAllocationToExpenseForm(allocation),
+            ...mappedAllocationForm,
+            allocationVoucherNumber:
+                voucher ||
+                mappedAllocationForm?.allocationVoucherNumber ||
+                "",
             expenses: prev.expenses,
             pod: prev.pod,
             summary: prev.summary,
@@ -3067,11 +3241,15 @@ const CreateEditTripExpence = () => {
 
         const tripId =
             allocation?.transportOrder?.transportOrderNumber ||
-            getAllocationVoucher(allocation) ||
+            mappedAllocationForm?.tripId ||
             "";
 
         if (tripId) {
-            syncLrNumberForTrip(tripId);
+            // ⭐ YELLOW STAR: UPDATED
+            syncLrNumberForTrip(
+                tripId,
+                voucher
+            );
         }
     };
 
@@ -3104,6 +3282,20 @@ const CreateEditTripExpence = () => {
     const validateForm = () => {
         if (!String(form.tripId || "").trim()) {
             toast.error("Trip ID is required");
+            return false;
+        }
+
+        // ⭐ YELLOW STAR: ADDED
+        if (
+            !isEdit &&
+            allocations.length > 0 &&
+            !String(
+                form.allocationVoucherNumber ||
+                form.tripAllocationVoucherNumber ||
+                ""
+            ).trim()
+        ) {
+            toast.error("Trip Allocation is required");
             return false;
         }
 
@@ -3433,11 +3625,18 @@ const CreateEditTripExpence = () => {
                     );
                 }
 
-                if (form.allocationVoucherNumber) {
+                // ⭐ YELLOW STAR: UPDATED
+                const completedAllocationVoucherNumber = String(
+                    form.allocationVoucherNumber ||
+                    form.tripAllocationVoucherNumber ||
+                    ""
+                ).trim();
+
+                if (completedAllocationVoucherNumber) {
                     try {
                         await unwrapThunk(
                             dispatch,
-                            syncAllocationStatusOnComplete(form.allocationVoucherNumber)
+                            syncAllocationStatusOnComplete(completedAllocationVoucherNumber)
                         );
                     } catch (allocationError) {
                         console.log("[TripExpense] allocation complete sync failed", allocationError);
@@ -3463,31 +3662,216 @@ const CreateEditTripExpence = () => {
                             orderResponse ||
                             {};
 
-                        const completedAt = new Date().toISOString();
-                        const statusHistory = Array.isArray(existingOrder?.statusHistory)
-                            ? [...existingOrder.statusHistory]
-                            : [];
+                        // ⭐ YELLOW STAR: ADDED — LEGACY SINGLE-TRIP DATA KEEPS EXISTING CLOSE BEHAVIOR.
+                        // For new allocation-aware records, close the parent Transport Order only
+                        // after the required number of non-cancelled allocations exist and every
+                        // one of those allocations is completed.
+                        let shouldCloseTransportOrder =
+                            !completedAllocationVoucherNumber;
 
-                        statusHistory.push({
-                            status: "completed",
-                            updatedOn: completedAt,
-                            updatedBy: completedBy,
-                        });
+                        if (completedAllocationVoucherNumber) {
+                            try {
+                                const allocationListResponse = await unwrapThunk(
+                                    dispatch,
+                                    getAllTripAllocation({
+                                        limit: 1000,
+                                        offset: 0,
+                                    })
+                                );
 
-                        await unwrapThunk(
-                            dispatch,
-                            updateTransportOrderByVoucherNumber({
-                                voucherNumber: transportOrderNumber,
-                                payload: normalizeApiPayloadDates({
-                                    ...existingOrder,
-                                    tripStatus: "completed",
-                                    orderStatus: "completed",
-                                    status: "close",
-                                    completedAt,
-                                    statusHistory,
-                                }),
-                            })
-                        );
+                                const allAllocationRecords =
+                                    extractTripRecords(allocationListResponse);
+
+                                const orderKey =
+                                    normalizeTripDocKey(
+                                        transportOrderNumber
+                                    );
+
+                                const currentAllocationKey =
+                                    normalizeTripDocKey(
+                                        completedAllocationVoucherNumber
+                                    );
+
+                                const orderAllocations =
+                                    allAllocationRecords.filter(
+                                        (item: any) => {
+                                            const allocationOrderKey =
+                                                normalizeTripDocKey(
+                                                    getAllocationTransportOrderNumber(
+                                                        item
+                                                    )
+                                                );
+
+                                            const allocationStatus =
+                                                String(
+                                                    item?.tripStatus ||
+                                                    item?.status ||
+                                                    ""
+                                                )
+                                                    .trim()
+                                                    .toLowerCase()
+                                                    .replace(
+                                                        /[\s-]+/g,
+                                                        "_"
+                                                    );
+
+                                            const isCancelled =
+                                                allocationStatus ===
+                                                "cancelled" ||
+                                                allocationStatus ===
+                                                "canceled";
+
+                                            return (
+                                                allocationOrderKey ===
+                                                orderKey &&
+                                                !isCancelled
+                                            );
+                                        }
+                                    );
+
+                                const requiredVehicles = Math.max(
+                                    1,
+                                    Number(
+                                        existingOrder
+                                            ?.vehicleRequirement
+                                            ?.numberOfVehicles ||
+                                        1
+                                    ) || 1
+                                );
+
+                                const allCreatedAllocationsCompleted =
+                                    orderAllocations.length > 0 &&
+                                    orderAllocations.every(
+                                        (item: any) => {
+                                            const allocationVoucherKey =
+                                                normalizeTripDocKey(
+                                                    getAllocationVoucher(
+                                                        item
+                                                    )
+                                                );
+
+                                            // ⭐ YELLOW STAR: ADDED — CURRENT ALLOCATION WAS
+                                            // JUST COMPLETED ABOVE. Treat it as completed even
+                                            // if the list API is momentarily stale.
+                                            if (
+                                                allocationVoucherKey &&
+                                                allocationVoucherKey ===
+                                                currentAllocationKey
+                                            ) {
+                                                return true;
+                                            }
+
+                                            const allocationStatus =
+                                                String(
+                                                    item?.tripStatus ||
+                                                    item?.status ||
+                                                    ""
+                                                )
+                                                    .trim()
+                                                    .toLowerCase()
+                                                    .replace(
+                                                        /[\s-]+/g,
+                                                        "_"
+                                                    );
+
+                                            return [
+                                                "completed",
+                                                "complete",
+                                                "closed",
+                                                "close",
+                                                "delivered",
+                                            ].includes(
+                                                allocationStatus
+                                            );
+                                        }
+                                    );
+
+                                const allRequiredAllocationsCreated =
+                                    orderAllocations.length >=
+                                    requiredVehicles;
+
+                                shouldCloseTransportOrder =
+                                    allRequiredAllocationsCreated &&
+                                    allCreatedAllocationsCompleted;
+
+                                console.log(
+                                    "[TripExpense] Transport Order completion check",
+                                    {
+                                        transportOrderNumber,
+                                        completedAllocationVoucherNumber,
+                                        requiredVehicles,
+                                        allocationCount:
+                                            orderAllocations.length,
+                                        shouldCloseTransportOrder,
+                                    }
+                                );
+                            } catch (
+                                allocationListError
+                            ) {
+                                // ⭐ YELLOW STAR: ADDED — DO NOT CLOSE A NEW MULTI-VEHICLE
+                                // ORDER IF WE CANNOT VERIFY ALL OF ITS ALLOCATIONS.
+                                shouldCloseTransportOrder = false;
+
+                                console.log(
+                                    "[TripExpense] Unable to verify all allocations before Transport Order close",
+                                    allocationListError
+                                );
+                            }
+                        }
+
+                        if (shouldCloseTransportOrder) {
+                            const completedAt =
+                                new Date().toISOString();
+
+                            const statusHistory =
+                                Array.isArray(
+                                    existingOrder?.statusHistory
+                                )
+                                    ? [
+                                          ...existingOrder.statusHistory,
+                                      ]
+                                    : [];
+
+                            statusHistory.push({
+                                status: "completed",
+                                updatedOn: completedAt,
+                                updatedBy: completedBy,
+
+                                // ⭐ YELLOW STAR: ADDED — KEEP THE FINAL PHYSICAL
+                                // TRIP REFERENCE IN ORDER HISTORY WHEN AVAILABLE.
+                                ...(completedAllocationVoucherNumber
+                                    ? {
+                                          allocationVoucherNumber:
+                                              completedAllocationVoucherNumber,
+                                      }
+                                    : {}),
+                            });
+
+                            await unwrapThunk(
+                                dispatch,
+                                updateTransportOrderByVoucherNumber({
+                                    voucherNumber:
+                                        transportOrderNumber,
+                                    payload:
+                                        normalizeApiPayloadDates(
+                                            {
+                                                ...existingOrder,
+                                                tripStatus:
+                                                    "completed",
+                                                orderStatus:
+                                                    "completed",
+                                                status: "close",
+                                                completedAt,
+                                                statusHistory,
+                                            }
+                                        ),
+                                })
+                            );
+                        } else {
+                            console.log(
+                                `[TripExpense] ${transportOrderNumber} remains open because another required allocation is not completed yet.`
+                            );
+                        }
                     } catch (transportOrderError) {
                         console.log(
                             "[TripExpense] transport order complete sync failed",
@@ -3496,7 +3880,7 @@ const CreateEditTripExpence = () => {
                     }
                 }
 
-                // ⭐ YELLOW STAR: ADDED — MARK MATCHING TRIP TRACKING AS DELIVERED
+                // ⭐ YELLOW STAR: UPDATED — MARK ONLY THE MATCHING PHYSICAL TRIP TRACKING AS DELIVERED
                 try {
                     const trackingListResponse = await unwrapThunk(
                         dispatch,
@@ -3513,17 +3897,64 @@ const CreateEditTripExpence = () => {
                         trackingListResponse?.records ||
                         [];
 
-                    const tripOrderNumber = normalizeTripDocKey(form.tripId);
+                    const tripOrderNumber =
+                        normalizeTripDocKey(
+                            form.tripId
+                        );
+
+                    const allocationKey =
+                        normalizeTripDocKey(
+                            completedAllocationVoucherNumber
+                        );
 
                     const trackingRecord = (
                         Array.isArray(trackingRecords)
                             ? trackingRecords
                             : []
-                    ).find(
-                        (item: any) =>
-                            normalizeTripDocKey(item?.transportOrderNumber) ===
-                            tripOrderNumber
-                    );
+                    ).find((item: any) => {
+                        const itemOrderKey =
+                            normalizeTripDocKey(
+                                item?.transportOrderNumber ||
+                                item?.tripOrder ||
+                                item?.trip_order
+                            );
+
+                        if (itemOrderKey !== tripOrderNumber) {
+                            return false;
+                        }
+
+                        // ⭐ YELLOW STAR: UPDATED — NEW MULTI-VEHICLE RECORDS
+                        // MUST MATCH ORDER + ALLOCATION WITH AND LOGIC.
+                        if (allocationKey) {
+                            const itemTripNumber =
+                                String(
+                                    item?.tripNumber ||
+                                    ""
+                                ).trim();
+
+                            const itemAllocationValue =
+                                item?.allocationVoucherNumber ||
+                                item?.tripAllocationVoucherNumber ||
+                                (
+                                    normalizeTripDocKey(
+                                        itemTripNumber
+                                    ) !==
+                                    itemOrderKey
+                                        ? itemTripNumber
+                                        : ""
+                                );
+
+                            return (
+                                normalizeTripDocKey(
+                                    itemAllocationValue
+                                ) === allocationKey
+                            );
+                        }
+
+                        // ⭐ YELLOW STAR: UPDATED — LEGACY TRACKING WITHOUT
+                        // ALLOCATION REFERENCE KEEPS ORDER-ONLY LOOKUP.
+                        return true;
+                    });
 
                     const trackingVoucherNumber = String(
                         trackingRecord?.trackingId ||
@@ -3539,8 +3970,21 @@ const CreateEditTripExpence = () => {
                             )}`,
                             normalizeApiPayloadDates({
                                 tripStatus: "Delivered",
-                                lastUpdatedAt: new Date().toISOString(),
+                                lastUpdatedAt:
+                                    new Date().toISOString(),
                             })
+                        );
+                    } else if (allocationKey) {
+                        // ⭐ YELLOW STAR: ADDED — NEVER FALL BACK TO ANOTHER
+                        // VEHICLE'S TRACKING RECORD WHEN ALLOCATION WAS SUPPLIED.
+                        console.log(
+                            "[TripExpense] Exact tracking record not found for",
+                            {
+                                transportOrderNumber:
+                                    form.tripId,
+                                allocationVoucherNumber:
+                                    completedAllocationVoucherNumber,
+                            }
                         );
                     }
                 } catch (trackingError) {
@@ -4062,6 +4506,19 @@ const CreateEditTripExpence = () => {
                                         className={inputClass}
                                         value={form.tripId || ""}
                                         onChange={(e) => patchHeader({ tripId: e.target.value })}
+                                    />
+                                </Field>
+
+                                {/* ⭐ YELLOW STAR: ADDED */}
+                                <Field label="Trip Allocation">
+                                    <input
+                                        readOnly
+                                        className={inputClass}
+                                        value={
+                                            form.allocationVoucherNumber ||
+                                            form.tripAllocationVoucherNumber ||
+                                            ""
+                                        }
                                     />
                                 </Field>
 

@@ -96,33 +96,40 @@ const TransportOrderList = () => {
 			""
 		).trim();
 
+	// ⭐ YELLOW STAR: UPDATED — ONE TRANSPORT ORDER CAN HAVE MULTIPLE LRs
 	const allocatedLRMap = useMemo(() => {
-		const map: any = {};
+		const map: Record<string, any[]> = {};
 
 		for (const lr of Array.isArray(tripLRCollection) ? tripLRCollection : []) {
 			const orderNumber = getLROrderNumber(lr);
 
 			if (!orderNumber) continue;
 
-			map[orderNumber] = {
+			if (!map[orderNumber]) {
+				map[orderNumber] = [];
+			}
+
+			map[orderNumber].push({
 				lrNumber: getLRNumber(lr),
 				raw: lr,
-			};
+			});
 		}
 
 		return map;
 	}, [tripLRCollection]);
 
-	const getAllocatedLR = (record: any) => {
+	// ⭐ YELLOW STAR: ADDED — RETURN ALL LRs FOR THE PARENT TRANSPORT ORDER
+	const getAllocatedLRs = (record: any) => {
 		const orderNumber = String(getOrderNumber(record) || "").trim();
 
-		if (!orderNumber) return null;
+		if (!orderNumber) return [];
 
-		return allocatedLRMap[orderNumber] || null;
+		return allocatedLRMap[orderNumber] || [];
 	};
 
+	// ⭐ YELLOW STAR: UPDATED — ONE TRANSPORT ORDER CAN HAVE MULTIPLE TRIP ALLOCATIONS
 	const allocatedTripMap = useMemo(() => {
-		const map: any = {};
+		const map: Record<string, any[]> = {};
 
 		for (const allocation of Array.isArray(activeAllocations) ? activeAllocations : []) {
 			const orderNumber = String(
@@ -135,24 +142,26 @@ const TransportOrderList = () => {
 				""
 			).trim();
 
-			if (orderNumber) map[orderNumber] = allocation;
+			if (!orderNumber) continue;
+
+			if (!map[orderNumber]) {
+				map[orderNumber] = [];
+			}
+
+			map[orderNumber].push(allocation);
 		}
 
 		return map;
 	}, [activeAllocations]);
 
-	const getAllocatedTrip = (record: any) => {
+	// ⭐ YELLOW STAR: ADDED — RETURN ALL ACTIVE ALLOCATIONS FOR THE PARENT TRANSPORT ORDER
+	const getAllocatedTrips = (record: any) => {
 		const orderNumber = String(getOrderNumber(record) || "").trim();
 
-		if (!orderNumber) return null;
+		if (!orderNumber) return [];
 
-		return allocatedTripMap[orderNumber] || null;
+		return allocatedTripMap[orderNumber] || [];
 	};
-
-	// const isOrderAllocatedInLR = (record: any) => {
-	// 	return Boolean(getAllocatedLR(record));
-	// };
-
 
 	const normalizeStatus = (value: any) =>
 		String(value || "open")
@@ -604,9 +613,26 @@ const TransportOrderList = () => {
 						? {
 
 							actions: (record: any) => {
-								const allocatedLR = getAllocatedLR(record);
-								const allocatedTrip = getAllocatedTrip(record);
-								const isAllocated = Boolean(allocatedTrip || allocatedLR);
+								// ⭐ YELLOW STAR: UPDATED — SUPPORT MULTIPLE LRs / ALLOCATIONS PER ORDER
+								const allocatedLRs = getAllocatedLRs(record);
+								const allocatedTrips = getAllocatedTrips(record);
+								const isAllocated = allocatedTrips.length > 0 || allocatedLRs.length > 0;
+
+								// ⭐ YELLOW STAR: ADDED — REMOVE EMPTY / DUPLICATE LR NUMBERS
+								const lrNumbers = Array.from(
+									new Set(
+										allocatedLRs
+											.map((item: any) => String(item?.lrNumber || "").trim())
+											.filter(Boolean)
+									)
+								);
+
+								const allocatedLRLabel =
+									lrNumbers.length === 1
+										? ` • ${lrNumbers[0]}`
+										: lrNumbers.length > 1
+											? ` • ${lrNumbers.length} LRs`
+											: "";
 
 								return (
 									<div className="flex items-center gap-2">
@@ -650,7 +676,7 @@ const TransportOrderList = () => {
 											</>
 										)}
 
-										{allocatedTrip && !allocatedLR && (
+										{allocatedTrips.length > 0 && allocatedLRs.length === 0 && (
 											<Permission
 												module="bookez"
 												permissionKey="transportOrder"
@@ -667,7 +693,7 @@ const TransportOrderList = () => {
 											</Permission>
 										)}
 
-										{allocatedLR && (
+										{allocatedLRs.length > 0 && (
 											<>
 
 												{/* <Permission
@@ -701,7 +727,7 @@ const TransportOrderList = () => {
 												>
 													<span>
 														Allocated
-														{allocatedLR?.lrNumber ? ` • ${allocatedLR.lrNumber}` : ""}
+														{allocatedLRLabel}
 													</span>
 												</button>
 
