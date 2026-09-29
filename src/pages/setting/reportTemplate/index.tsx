@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Check, RefreshCw, FileText, Loader2, Palette, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { findThemeIndex, getActiveReportTheme, getAllReportThemes, getReportPdfPreview, getThemeKey, REPORT_TEMPLATE_CODES, REPORT_TEMPLATE_OPTIONS, setActiveReportTheme, type ReportTheme } from "../../../redux/slices/professionalSlice/reportTemplateSlice";
+import { findThemeIndex, getActiveReportTheme, getAllReportThemes, getReportPdfPreview, getThemeKey, REPORT_TEMPLATE_CODES, REPORT_TEMPLATE_OPTIONS, setActiveReportTheme } from "../../../redux/slices/professionalSlice/reportTemplateSlice";
 import { clearReportPreviews } from "../../../redux/slices/professionalSlice/reportTemplateSlice";
 import { buildPdfPreviewHtml } from "./html";
 
@@ -72,12 +72,12 @@ const ReportTemplate = () => {
 
     const reportTemplateState = useSelector((state: any) => state.reportTemplate);
 
-    const themes: ReportTheme[] = reportTemplateState?.themes || [];
+    const themes: any = reportTemplateState?.themes || [];
     const previews = reportTemplateState?.previews || {};
     const themesLoader = reportTemplateState?.themesLoader || false;
 
     const [selectedIdx, setSelectedIdx] = useState(0);
-    const [selectedTheme, setSelectedTheme] = useState<ReportTheme | null>(null);
+    const [selectedTheme, setSelectedTheme]:any = useState(null);
     const [templateIdx, setTemplateIdx] = useState(DEFAULT_TEMPLATE_IDX);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -169,7 +169,7 @@ const ReportTemplate = () => {
     );
 
     const applyTheme = useCallback(
-        async (theme: ReportTheme, idx: number) => {
+        async (theme: any, idx: number) => {
             if (!theme?._id || savingRef.current) return;
 
             if (selectedTheme?._id === theme._id && selectedTheme?.isActive) {
@@ -198,8 +198,8 @@ const ReportTemplate = () => {
                     dispatch(getAllReportThemes()).unwrap().catch(() => [])
                 ]);
 
-                const nextList: ReportTheme[] = list?.length ? list : themes;
-                const nextActive: ReportTheme = resolvedActive || (saved?._id ? saved : null) || { ...theme, isActive: true };
+                const nextList = list?.length ? list : themes;
+                const nextActive = resolvedActive || (saved?._id ? saved : null) || { ...theme, isActive: true };
                 const nextIdx = Math.max(0, findThemeIndex(nextList, nextActive));
 
                 setSelectedTheme(nextActive);
@@ -232,7 +232,7 @@ const ReportTemplate = () => {
 
                 if (!mounted) return;
 
-                const resolvedActive = active || list.find((theme: ReportTheme) => theme.isActive) || list[0] || null;
+                const resolvedActive = active || list.find((theme: any) => theme.isActive) || list[0] || null;
 
                 setSelectedTheme(resolvedActive);
                 setSelectedIdx(resolvedActive ? Math.max(0, findThemeIndex(list, resolvedActive)) : 0);
@@ -576,7 +576,7 @@ const ReportTemplate = () => {
                                 <ThemesLoader />
                             ) : themes.length > 0 ? (
                                 <div className="grid h-full content-start grid-cols-4 gap-x-1 gap-y-1">
-                                    {themes.map((theme, index) => {
+                                    {themes.map((theme:any, index:any) => {
                                         const active = index === selectedIdx;
 
                                         return (

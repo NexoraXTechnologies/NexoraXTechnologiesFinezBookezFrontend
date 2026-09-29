@@ -9,7 +9,6 @@ import { createAccount, getAccountByCode, getAllAccountMasterSchema, updateAccou
 import { downloadBlobPdf, printHtmlUsingIframe } from "../utils/pdf/pdfPrint";
 import { buildPdfHtml } from "../utils/pdf/pdfTemplate";
 import { toast } from "react-toastify";
-import { buildUpiLink, generateQrDataUrl } from "../utils/pdf/upiQr";
 import { normalizeDoc } from "../utils/pdf/pdfNormalizer";
 import { getCitiesByState, getStates } from "../redux/slices/professionalSlice/stateCitySlice";
 import { SelectInput, TextArea, TextInput, ToggleInput } from "./inputs";
