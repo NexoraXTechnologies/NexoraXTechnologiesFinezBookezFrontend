@@ -5,6 +5,8 @@ import { ArrowLeft, Boxes, Edit, LayoutGrid, Package, Plus, Ruler, Save, Setting
 import { toast } from "react-toastify";
 import { clearMasterConfigurationState, clearSelectedMasterConfiguration, createMasterConfiguration, deleteMasterConfiguration, getAllMasterConfigurations, getMasterConfigurationByCode, updateMasterConfiguration, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterConfigurationSlice";
 import { clearAccountMasterSchemaError, clearAccountMasterSchemaState, getAccountMasterSchema, saveAccountMasterSchema, updateAccountMasterSchema, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/accountmasterSchemaSlice";
+// ⭐ UPDATED
+import { clearCompanyMasterSchemaError, clearCompanyMasterSchemaState, getCompanyMasterSchema, saveCompanyMasterSchema, updateCompanyMasterSchema, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/companyMaster";
 import { clearProductMasterSchemaError, clearProductMasterSchemaState, getProductMasterSchema, saveProductMasterSchema, updateProductMasterSchema, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/productMasterSchemaSlice";
 import { clearUnitMeasurementSchemaError, clearUnitMeasurementSchemaState, getUnitMeasurementSchema, saveUnitMeasurementSchema, updateUnitMeasurementSchema, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/unitMeasurementSchemaSlice";
 import { clearMasterSchemaError, clearMasterSchemaState, getMasterSchema, saveMasterSchema, updateMasterSchema, } from "../../../redux/slices/professionalSlice/masterConfigurationSlice/masterSchemaSlice";
@@ -32,7 +34,8 @@ type MasterConfigurationItem = MasterConfigurationForm & {
 	modifiedBy?: string;
 };
 
-type StandardMasterKey = "accountMaster" | "productMaster" | "unitMeasurement" | "teamEmployeeMaster";
+// ⭐ UPDATED
+type StandardMasterKey = "companyMaster" | "accountMaster" | "productMaster" | "unitMeasurement" | "teamEmployeeMaster";
 
 type StandardMasterItem = {
 	key: StandardMasterKey;
@@ -131,6 +134,7 @@ const INITIAL_SCHEMA_FIELD_FORM: SchemaFieldForm = {
 };
 
 const STANDARD_MASTERS: StandardMasterItem[] = [
+	// ⭐ UPDATED
 	{
 		key: "accountMaster",
 		name: "Account Master",
@@ -157,6 +161,13 @@ const STANDARD_MASTERS: StandardMasterItem[] = [
 		name: "Team / Employee Master",
 		description: "Configure dynamic fields for application users, employees and team members.",
 		icon: <Users size={18} />,
+		schemaEnabled: true,
+	},
+	{
+		key: "companyMaster",
+		name: "Company Master",
+		description: "Configure dynamic fields used for company and business master details.",
+		icon: <Boxes size={18} />,
 		schemaEnabled: true,
 	},
 ];
@@ -225,6 +236,8 @@ const MasterConfiguration = () => {
 	const dispatch = useDispatch<any>();
 	const { masterConfigurations = [], pagination = {}, selectedMasterConfiguration, loading: moduleLoading, createLoading, updateLoading, error: moduleError, } = useSelector((state: any) => state.masterConfiguration || {});
 	const { fields: customSchemaFields = [], pagination: customSchemaPagination = {}, loading: customSchemaLoading, saveLoading: customSchemaSaveLoading, updateLoading: customSchemaUpdateLoading, error: customSchemaError, } = useSelector((state: any) => state.masterSchema || {});
+	// ⭐ UPDATED
+	const { fields: companySchemaFields = [], pagination: companySchemaPagination = {}, loading: companySchemaLoading, saveLoading: companySchemaSaveLoading, updateLoading: companySchemaUpdateLoading, error: companySchemaError, } = useSelector((state: any) => state.companyMasterSchema || {});
 	const { fields: accountSchemaFields = [], pagination: accountSchemaPagination = {}, loading: accountSchemaLoading, saveLoading: accountSchemaSaveLoading, updateLoading: accountSchemaUpdateLoading, error: accountSchemaError, } = useSelector((state: any) => state.accountMasterSchema || {});
 	const { fields: productSchemaFields = [], pagination: productSchemaPagination = {}, loading: productSchemaLoading, saveLoading: productSchemaSaveLoading, updateLoading: productSchemaUpdateLoading, error: productSchemaError, } = useSelector((state: any) => state.productMasterSchema || {});
 	const { fields: unitSchemaFields = [], pagination: unitSchemaPagination = {}, loading: unitSchemaLoading, saveLoading: unitSchemaSaveLoading, updateLoading: unitSchemaUpdateLoading, error: unitSchemaError, } = useSelector((state: any) => state.unitMeasurementSchema || {});
@@ -323,6 +336,20 @@ const MasterConfiguration = () => {
 			return;
 		}
 
+		// ⭐ UPDATED
+		if (selectedStandardMaster.key ===
+			"companyMaster") {
+			dispatch(clearCompanyMasterSchemaState());
+			dispatch(getCompanyMasterSchema({
+				offset: schemaOffset,
+				limit: schemaLimit,
+				isSearchable: "",
+				isRequired: "",
+				isFilterable: "",
+			}));
+			return;
+		}
+
 		if (selectedStandardMaster.key ===
 			"accountMaster") {
 			dispatch(clearAccountMasterSchemaState());
@@ -406,6 +433,19 @@ const MasterConfiguration = () => {
 		dispatch(clearMasterSchemaError());
 	}, [
 		customSchemaError,
+		dispatch,
+	]);
+
+	// ⭐ UPDATED
+	useEffect(() => {
+		if (!companySchemaError) {
+			return;
+		}
+
+		toast.error(companySchemaError);
+		dispatch(clearCompanyMasterSchemaError());
+	}, [
+		companySchemaError,
 		dispatch,
 	]);
 
@@ -792,6 +832,18 @@ const MasterConfiguration = () => {
 			};
 		}
 
+		// ⭐ UPDATED
+		if (schemaContext.standardKey ===
+			"companyMaster") {
+			return {
+				fields: companySchemaFields as SchemaField[],
+				pagination: companySchemaPagination,
+				loading: !!companySchemaLoading,
+				saveLoading: !!companySchemaSaveLoading,
+				updateLoading: !!companySchemaUpdateLoading,
+			};
+		}
+
 		if (schemaContext.standardKey ===
 			"accountMaster") {
 			return {
@@ -839,6 +891,11 @@ const MasterConfiguration = () => {
 		customSchemaLoading,
 		customSchemaSaveLoading,
 		customSchemaUpdateLoading,
+		companySchemaFields,
+		companySchemaPagination,
+		companySchemaLoading,
+		companySchemaSaveLoading,
+		companySchemaUpdateLoading,
 		accountSchemaFields,
 		accountSchemaPagination,
 		accountSchemaLoading,
@@ -1163,6 +1220,19 @@ const MasterConfiguration = () => {
 	};
 
 	const reloadStandardSchema = async (standardKey: StandardMasterKey) => {
+		// ⭐ UPDATED
+		if (standardKey ===
+			"companyMaster") {
+			await dispatch(getCompanyMasterSchema({
+				offset: schemaOffset,
+				limit: schemaLimit,
+				isSearchable: "",
+				isRequired: "",
+				isFilterable: "",
+			})).unwrap();
+			return;
+		}
+
 		if (standardKey ===
 			"accountMaster") {
 			await dispatch(getAccountMasterSchema({
@@ -1254,6 +1324,34 @@ const MasterConfiguration = () => {
 				closeSchemaForm();
 				await reloadCustomMasterSchema();
 				return;
+			}
+
+			// ⭐ UPDATED
+			if (schemaContext.standardKey ===
+				"companyMaster") {
+				if (editingSchemaFieldKey) {
+					const { key: _ignoredKey, ...updateData } = fieldPayload;
+
+					await dispatch(updateCompanyMasterSchema({
+						updates: [
+							{
+								key: editingSchemaFieldKey,
+								updateData,
+							},
+						],
+					})).unwrap();
+
+					toast.success("Company-master schema field updated successfully.");
+				}
+				else {
+					await dispatch(saveCompanyMasterSchema({
+						fields: [
+							fieldPayload,
+						],
+					})).unwrap();
+
+					toast.success("Company-master schema field added successfully.");
+				}
 			}
 
 			if (schemaContext.standardKey ===

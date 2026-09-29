@@ -43,7 +43,6 @@ const pickReceiptPaymentValue = (obj: any, keys: string[] = []) => {
 const normalizeReceiptPayment = (payload: any) => {
     const doc = payload?.data ?? payload;
     if (!doc || typeof doc !== "object") return null;
-
     const isReceipt = Boolean(doc?.recVoucherNumber);
     const isPayment = Boolean(doc?.payVoucherNumber);
 
