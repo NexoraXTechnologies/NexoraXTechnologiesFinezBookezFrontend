@@ -4333,6 +4333,11 @@ const eWayBillSlice = createSlice({
             .addCase(getTransporterEWayBillAccessToken.rejected, (state, action: any) => {
                 state.transporterAccessTokenLoader = false;
                 state.transporterAccessToken = null;
+
+                // ⭐ YELLOW STAR: ADDED — CLEAR OLD TRANSPORTER E-WAY BILL DATA ON TOKEN FAILURE
+                state.eWayBill = [];
+                state.pagination = null;
+
                 state.error =
                     action.payload?.message ||
                     "Failed to get transporter e-way bill access token";

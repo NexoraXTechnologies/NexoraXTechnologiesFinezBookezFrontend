@@ -459,12 +459,18 @@ const normalizeVehicle = (vehicle: any = {}) => {
         "Available";
 
 
+    // ⭐ YELLOW STAR: UPDATED — RESOLVE LINKED DRIVER FROM RAW VEHICLE MASTER DATA ALSO
     const linkedDriver =
+        vehicle?.linkedDriver ||
         vehicle?.customemployeemaster ||
         vehicle?.customEmployeeMaster ||
         vehicle?.driver ||
         vehicle?.rawRecord?.customemployeemaster ||
         vehicle?.rawRecord?.customEmployeeMaster ||
+        vehicle?.rawRecord?.driver ||
+        vehicle?.rawRecord?.data?.customemployeemaster ||
+        vehicle?.rawRecord?.data?.customEmployeeMaster ||
+        vehicle?.rawRecord?.data?.driver ||
         null;
 
     const vendorReference =
@@ -590,22 +596,78 @@ const normalizeVehicle = (vehicle: any = {}) => {
     };
 };
 
-const buildAllocatedOrderSet = (allocations: any[] = []) => {
-    const set = new Set();
+// ⭐ YELLOW STAR: ADDED — NORMALIZE VEHICLE NUMBER FOR ALLOCATION CHECK
+const normalizeVehicleNumber = (value: any) =>
+    String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "");
+
+// ⭐ YELLOW STAR: ADDED — GET REQUIRED VEHICLE COUNT FROM TRANSPORT ORDER
+const getRequiredVehicleCount = (transportOrder: any = {}) => {
+    const count = parseInt(
+        String(
+            transportOrder?.vehicleRequirement?.numberOfVehicles ||
+            transportOrder?.numberOfVehicles ||
+            transportOrder?.requiredNumberOfVehicles ||
+            "1"
+        ),
+        10
+    );
+
+    return Number.isFinite(count) && count > 0 ? count : 1;
+};
+
+// ⭐ YELLOW STAR: UPDATED — TRACK ORDER ALLOCATION COUNT + ACTIVE VEHICLE NUMBERS
+const buildAllocationUsage = (allocations: any[] = []) => {
+    const orderAllocationCount: Record<string, number> = {};
+    const vehicleAssignmentMap: Record<string, any> = {};
 
     for (const item of Array.isArray(allocations) ? allocations : []) {
-        const status = String(item?.tripStatus || "").toLowerCase();
-
-        if (status === "completed" || status === "cancelled") continue;
+        const status = String(item?.tripStatus || "").trim().toLowerCase();
 
         const orderNumber = String(
-            item?.transportOrder?.transportOrderNumber || ""
+            item?.transportOrder?.transportOrderNumber ||
+            item?.transportOrderNumber ||
+            ""
         ).trim();
 
-        if (orderNumber) set.add(orderNumber);
+        // A cancelled allocation should not consume one of the required vehicles.
+        // Completed allocations still count against the Transport Order requirement.
+        if (orderNumber && status !== "cancelled") {
+            orderAllocationCount[orderNumber] =
+                (orderAllocationCount[orderNumber] || 0) + 1;
+        }
+
+        // Completed/cancelled vehicles can be used again for another active trip.
+        if (status === "completed" || status === "cancelled") continue;
+
+        const vehicleNumber = normalizeVehicleNumber(
+            item?.vehicleSelection?.vehicleNumber ||
+            item?.assignedVehicle?.vehicleNumber ||
+            item?.vehicle?.vehicleNumber ||
+            item?.vehicleNumber ||
+            ""
+        );
+
+        if (!vehicleNumber) continue;
+
+        vehicleAssignmentMap[vehicleNumber] = {
+            allocationVoucher:
+                item?.tripAllocationVoucherNumber ||
+                item?.tripNumber ||
+                item?.voucherNumber ||
+                item?.allocationNumber ||
+                "",
+            transportOrderNumber: orderNumber,
+            tripStatus: item?.tripStatus || "",
+        };
     }
 
-    return set;
+    return {
+        orderAllocationCount,
+        vehicleAssignmentMap,
+    };
 };
 
 const buildDriverAssignmentMap = (allocations: any[] = []) => {
@@ -647,6 +709,7 @@ const getRequiredCapacity = (transportOrder: any = {}) => {
 const getRequiredVehicleType = (transportOrder: any = {}) => {
     return String(
         transportOrder?.requiredVehicleType ||
+        transportOrder?.vehicleRequirement?.vehicleType ||
         transportOrder?.vehicleType ||
         transportOrder?.vehicle_type ||
         ""
@@ -659,6 +722,8 @@ const filterVehicles = ({
     vehicleTypeFilter,
     capacityFilter,
     locationFilter,
+    vehicleAssignmentMap = {},
+    currentAllocationVoucher = "",
 }: any) => {
     const requiredCapacity = getRequiredCapacity(transportOrder);
     const selectedCapacity = parseNumber(capacityFilter);
@@ -667,6 +732,23 @@ const filterVehicles = ({
     return (vehicles || [])
         .map(normalizeVehicle)
         .filter((vehicle: any) => {
+            // ⭐ YELLOW STAR: ADDED — DO NOT SHOW A VEHICLE ALREADY ALLOCATED TO ANOTHER ACTIVE TRIP
+            const vehicleNumber = normalizeVehicleNumber(
+                vehicle?.vehicleNumber || vehicle?.vehicle_number
+            );
+
+            const existingAssignment = vehicleNumber
+                ? vehicleAssignmentMap[vehicleNumber]
+                : null;
+
+            if (
+                existingAssignment &&
+                (!currentAllocationVoucher ||
+                    existingAssignment.allocationVoucher !== currentAllocationVoucher)
+            ) {
+                return false;
+            }
+
             // Only ever show vehicles whose current status is Available/Active
             if (!isAvailableVehicleStatus(vehicle?.availabilityStatus)) {
                 return false;
@@ -838,10 +920,14 @@ const CreateTripAllocation = ({
         return normalizeDriverUsers(list);
     }, [users]);
 
-    const allocatedOrderSet = useMemo(
-        () => buildAllocatedOrderSet(activeAllocations),
+    // ⭐ YELLOW STAR: UPDATED — SUPPORT MULTIPLE ONE-BY-ONE VEHICLE ALLOCATIONS PER TRANSPORT ORDER
+    const allocationUsage = useMemo(
+        () => buildAllocationUsage(activeAllocations),
         [activeAllocations]
     );
+
+    const orderAllocationCount = allocationUsage.orderAllocationCount;
+    const vehicleAssignmentMap = allocationUsage.vehicleAssignmentMap;
 
     const driverAssignmentMap = useMemo(
         () => buildDriverAssignmentMap(activeAllocations),
@@ -915,6 +1001,9 @@ const CreateTripAllocation = ({
                 vehicleTypeFilter,
                 capacityFilter,
                 locationFilter,
+                // ⭐ YELLOW STAR: ADDED — EXCLUDE VEHICLES ALREADY USED IN ANOTHER ACTIVE ALLOCATION
+                vehicleAssignmentMap,
+                currentAllocationVoucher: isEdit ? voucherNumber : "",
             }),
         [
             normalizedVehicles,
@@ -923,6 +1012,9 @@ const CreateTripAllocation = ({
             vehicleOwnershipFilter,
             capacityFilter,
             locationFilter,
+            vehicleAssignmentMap,
+            isEdit,
+            voucherNumber,
         ]
     );
 
@@ -982,24 +1074,34 @@ const CreateTripAllocation = ({
                         return true;
                     }
 
-                    return !allocatedOrderSet.has(voucher);
+                    // ⭐ YELLOW STAR: UPDATED — KEEP ORDER AVAILABLE UNTIL REQUIRED VEHICLE COUNT IS REACHED
+                    const requiredVehicles = getRequiredVehicleCount(order);
+                    const allocatedVehicles = orderAllocationCount[voucher] || 0;
+
+                    return allocatedVehicles < requiredVehicles;
                 })
-                .map((order: any) => ({
-                    label: `${getTransportOrderVoucher(order)} - ${truncate(
-                        order?.customerDetails?.customerName || "-",
-                        20
-                    )} (${truncate(
-                        order?.pickupDetails?.pickupLocation || "-",
-                        15
-                    )} → ${truncate(
-                        order?.deliveryDetails?.deliveryLocation || "-",
-                        15
-                    )})`,
-                    value: getTransportOrderVoucher(order),
-                })),
+                .map((order: any) => {
+                    const voucher = getTransportOrderVoucher(order);
+                    const requiredVehicles = getRequiredVehicleCount(order);
+                    const allocatedVehicles = orderAllocationCount[voucher] || 0;
+
+                    return {
+                        label: `${voucher} - ${truncate(
+                            order?.customerDetails?.customerName || "-",
+                            20
+                        )} (${allocatedVehicles}/${requiredVehicles} Vehicles) (${truncate(
+                            order?.pickupDetails?.pickupLocation || "-",
+                            15
+                        )} → ${truncate(
+                            order?.deliveryDetails?.deliveryLocation || "-",
+                            15
+                        )})`,
+                        value: voucher,
+                    };
+                }),
         [
             transportOrders,
-            allocatedOrderSet,
+            orderAllocationCount,
             isEdit,
             form.transportOrder?.transportOrderNumber,
         ]
@@ -1403,7 +1505,12 @@ const CreateTripAllocation = ({
         );
 
     useEffect(() => {
-        dispatch(getTransportOrders({ limit: 200, offset: 0, status: "open" }));
+        // ⭐ YELLOW STAR: UPDATED — LOAD ALL TRANSPORT ORDERS HERE.
+        // A multi-vehicle order may be marked close/allocated by the backend after
+        // its first allocation, but it must remain selectable until the required
+        // numberOfVehicles has actually been allocated. transportOrderOptions
+        // below already removes it once the required allocation count is reached.
+        dispatch(getTransportOrders({ limit: 200, offset: 0 }));
         dispatch(getActiveTripAllocations({
             limit: 200, offset: 0,
         }));
@@ -1614,6 +1721,9 @@ const CreateTripAllocation = ({
             vehicleOwnershipFilter,
             capacityFilter,
             locationFilter,
+            // ⭐ YELLOW STAR: ADDED — BEST VEHICLE MUST ALSO BE FREE FROM ANOTHER ACTIVE ALLOCATION
+            vehicleAssignmentMap,
+            currentAllocationVoucher: isEdit ? voucherNumber : "",
         });
 
         if (!picked) {
@@ -1662,7 +1772,26 @@ const CreateTripAllocation = ({
                 return;
             }
 
-            const mappedOrder = mapTransportOrderToAllocation(order);
+            const baseMappedOrder = mapTransportOrderToAllocation(order);
+
+            // ⭐ YELLOW STAR: UPDATED — PRESERVE VEHICLE REQUIREMENT FOR ONE-BY-ONE ALLOCATION
+            const mappedOrder = {
+                ...baseMappedOrder,
+                vehicleRequirement: {
+                    ...(baseMappedOrder?.vehicleRequirement || {}),
+                    ...(order?.vehicleRequirement || {}),
+                },
+                numberOfVehicles:
+                    order?.vehicleRequirement?.numberOfVehicles ||
+                    baseMappedOrder?.numberOfVehicles ||
+                    baseMappedOrder?.requiredNumberOfVehicles ||
+                    "1",
+                requiredNumberOfVehicles:
+                    order?.vehicleRequirement?.numberOfVehicles ||
+                    baseMappedOrder?.requiredNumberOfVehicles ||
+                    baseMappedOrder?.numberOfVehicles ||
+                    "1",
+            };
 
             setForm((prev: any) => ({
                 ...prev,
@@ -1725,6 +1854,9 @@ const CreateTripAllocation = ({
                 vehicleTypeFilter: requiredVehicleType,
                 capacityFilter: String(requiredCapacity),
                 locationFilter: "",
+                // ⭐ YELLOW STAR: ADDED — AUTO PICK MUST NOT REUSE AN ALLOCATED VEHICLE NUMBER
+                vehicleAssignmentMap,
+                currentAllocationVoucher: isEdit ? voucherNumber : "",
             });
 
             if (picked) applyVehicle(picked);
@@ -1846,15 +1978,30 @@ const CreateTripAllocation = ({
 
         const normalized = normalizeVehicle(vehicle);
 
+        // ⭐ YELLOW STAR: UPDATED — READ LINKED DRIVER FROM EVERY VEHICLE MASTER SHAPE
         const linkedDriver =
             normalized?.linkedDriver ||
+            vehicle?.linkedDriver ||
             vehicle?.customemployeemaster ||
+            vehicle?.customEmployeeMaster ||
+            vehicle?.driver ||
             vehicle?.rawRecord?.customemployeemaster ||
+            vehicle?.rawRecord?.customEmployeeMaster ||
+            vehicle?.rawRecord?.driver ||
+            vehicle?.rawRecord?.data?.customemployeemaster ||
+            vehicle?.rawRecord?.data?.customEmployeeMaster ||
+            vehicle?.rawRecord?.data?.driver ||
             null;
 
+        // ⭐ YELLOW STAR: UPDATED — SUPPORT MAPPED DRIVER ID AS WELL AS RAW EMPLOYEE OBJECT
         const driverId = String(
             linkedDriver?.userMobileNumberHash ||
+            linkedDriver?.mobileNumberHash ||
+            linkedDriver?.userMobileNumber ||
+            linkedDriver?.driverId ||
             normalized?.linkedDriverId ||
+            vehicle?.linkedDriverId ||
+            vehicle?.driverId ||
             ""
         ).trim();
 
@@ -2087,6 +2234,43 @@ const CreateTripAllocation = ({
 
         if (!form.driverAllocation?.driverId) {
             toast.warn("Please select driver");
+            return false;
+        }
+
+        // ⭐ YELLOW STAR: ADDED — DO NOT ALLOW MORE ALLOCATIONS THAN TRANSPORT ORDER REQUIRES
+        if (!isEdit) {
+            const orderNumber = String(
+                form.transportOrder?.transportOrderNumber || ""
+            ).trim();
+
+            const requiredVehicles = getRequiredVehicleCount(form.transportOrder);
+            const allocatedVehicles = orderAllocationCount[orderNumber] || 0;
+
+            if (allocatedVehicles >= requiredVehicles) {
+                toast.warn(
+                    `All ${requiredVehicles} required vehicle allocation${requiredVehicles > 1 ? "s" : ""} already completed for ${orderNumber}`
+                );
+                return false;
+            }
+        }
+
+        // ⭐ YELLOW STAR: ADDED — VEHICLE NUMBER CAN BELONG TO ONLY ONE ACTIVE ALLOCATION
+        const selectedVehicleNumber = normalizeVehicleNumber(
+            form.vehicleSelection?.vehicleNumber ||
+            form.vehicleSelection?.vehicle_number
+        );
+
+        const selectedVehicleAssignment = selectedVehicleNumber
+            ? vehicleAssignmentMap[selectedVehicleNumber]
+            : null;
+
+        if (
+            selectedVehicleAssignment &&
+            (!isEdit || selectedVehicleAssignment.allocationVoucher !== voucherNumber)
+        ) {
+            toast.warn(
+                `${form.vehicleSelection?.vehicleNumber || "This vehicle"} is already allocated to trip ${selectedVehicleAssignment.allocationVoucher || "another active trip"}. Please select another vehicle.`
+            );
             return false;
         }
 

@@ -255,7 +255,47 @@ const getVehicleNumber = (item: any) => {
 const getTripLabel = (item: any) => {
     const trackingVoucher = getTripTrackingVoucher(item);
 
-    return item?.transportOrderNumber || item?.tripNumber || trackingVoucher || "-";
+    // ⭐ YELLOW STAR: UPDATED — KEEP TRANSPORT ORDER AS THE PARENT/BUSINESS REFERENCE
+    return (
+        item?.transportOrderNumber ||
+        item?.transportOrder?.transportOrderNumber ||
+        item?.orderNumber ||
+        item?.tripNumber ||
+        trackingVoucher ||
+        "-"
+    );
+};
+
+// ⭐ YELLOW STAR: UPDATED — EXACT PHYSICAL VEHICLE TRIP REFERENCE.
+// Tracking API currently returns the parent order in `transportOrderNumber`
+// and the exact Trip Allocation voucher in `tripNumber` (example: TO-47 + TA-50).
+// `tripNumber` is used only when it is different from the parent order so old
+// records where tripNumber itself contains TO-xx are not misclassified.
+const getAllocationVoucherNumber = (item: any) => {
+    const transportOrderNumber = String(
+        item?.transportOrderNumber ||
+        item?.transportOrder?.transportOrderNumber ||
+        item?.orderNumber ||
+        ""
+    ).trim();
+
+    const tripNumber = String(item?.tripNumber || "").trim();
+
+    return String(
+        item?.allocationVoucherNumber ||
+        item?.tripAllocationVoucherNumber ||
+        item?.allocation?.allocationVoucherNumber ||
+        item?.allocation?.tripAllocationVoucherNumber ||
+        item?.allocation?.tripNumber ||
+        item?.tripAllocation?.allocationVoucherNumber ||
+        item?.tripAllocation?.tripNumber ||
+        (transportOrderNumber &&
+        tripNumber &&
+        tripNumber.toLowerCase() !== transportOrderNumber.toLowerCase()
+            ? tripNumber
+            : "") ||
+        ""
+    ).trim();
 };
 
 const getLastUpdated = (item: any) => {
@@ -1503,7 +1543,18 @@ const LiveTripTracking = () => {
     const driverName = getDriverName(tracking);
     const driverMobile = getDriverMobile(tracking);
     const vehicleNumber = getVehicleNumber(tracking);
-    const tripLabel = state?.tripLabel || getTripLabel(tracking);
+    // ⭐ YELLOW STAR: UPDATED — PREFER THE PARENT ORDER PASSED FROM THE LIST
+    const tripLabel =
+        state?.transportOrderNumber ||
+        state?.tripLabel ||
+        getTripLabel(tracking);
+
+    // ⭐ YELLOW STAR: ADDED — TRACKING VOUCHER REMAINS THE EXACT LOOKUP KEY,
+    // WHILE ORDER + ALLOCATION ARE PRESERVED FOR DISPLAY/TRACEABILITY.
+    const allocationVoucherNumber =
+        getAllocationVoucherNumber(tracking) ||
+        String(state?.allocationVoucherNumber || "").trim();
+
     const tripStatus = tracking?.tripStatus || tracking?.status || "Live";
 
     return (
@@ -1539,6 +1590,15 @@ const LiveTripTracking = () => {
                                             {vehicleNumber}
                                         </span>{" "}
                                         | Trip No. :  <span className="font-bold text-primary">{tripLabel}</span>
+                                        {allocationVoucherNumber && (
+                                            <>
+                                                {" "}
+                                                | Allocation No. :{" "}
+                                                <span className="font-bold text-primary">
+                                                    {allocationVoucherNumber}
+                                                </span>
+                                            </>
+                                        )}
                                     </h2>
                                 </div>
 
@@ -1634,6 +1694,9 @@ const LiveTripTracking = () => {
                                     <div className="shrink-0 rounded-md border border-border bg-card p-3 shadow-sm">
                                         <div className="grid grid-cols-1 gap-3">
                                             <InfoItem icon={User} label="Driver" value={driverName} />
+
+                                            {/* ⭐ YELLOW STAR: ADDED — DISPLAY EXACT PHYSICAL TRIP REFERENCE */}
+                                           
 
                                             <InfoItem
                                                 icon={Navigation}
