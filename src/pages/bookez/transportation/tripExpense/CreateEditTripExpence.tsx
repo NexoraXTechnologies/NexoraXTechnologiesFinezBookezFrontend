@@ -958,6 +958,9 @@ const buildTransportInvoiceLine = ({ product, freightAmount, context }: any) => 
     // ⭐ YELLOW STAR: ADDED — TRANSPORTATION FIELDS MUST BE IN INVOICE BODY
     trip_order: context.transportOrderNumber || "",
 
+    // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+    trip_allocation: context.allocationVoucherNumber || "",
+
     // ⭐ YELLOW STAR: ADDED — KEEP TRANSPORT ORDER AS PARENT, ALLOCATION AS EXACT VEHICLE TRIP
     allocationVoucherNumber: context.allocationVoucherNumber || "",
 
@@ -976,6 +979,10 @@ const buildTransportationHeaderFields = (context: any) => ({
     allocationVoucherNumber: context.allocationVoucherNumber || "",
 
     trip_order: context.transportOrderNumber || "",
+
+    // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+    trip_allocation: context.allocationVoucherNumber || "",
+
     lr_no: context.lrNo || "",
     driver: context.driver || "",
     vehicleCode: context.vehicleCode || "",
@@ -1171,6 +1178,10 @@ const createTripVendorAdvancePayment = async ({
         allocationVoucherNumber: context.allocationVoucherNumber || "",
 
         trip_order: context.transportOrderNumber || "",
+
+        // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+        trip_allocation: context.allocationVoucherNumber || "",
+
         lr_no: context.lrNo || "",
         driver: context.driver || "",
         vehicleCode: context.vehicleCode || "",

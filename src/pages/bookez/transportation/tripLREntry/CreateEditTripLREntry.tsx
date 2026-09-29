@@ -729,10 +729,10 @@ const toTripLRCollectionPayload = (form: any, overrides: any = {}) => {
                 : touchUpLr && typeof touchUpLr === "object" && Object.keys(touchUpLr).length
                     ? { ...touchUpLr }
                     : {};
-            const imageMimeType = newImageBase64.match(/^data:([^;]+);base64,/)?.[1] || touchUpLr?.fileType || "image/jpeg";
-            const imageExtension = imageMimeType.includes("png") ? "png" : "jpg";
-            const imageFileName = sanitizeFileName(touchUpLr?.fileName || `${transportTouchupNumber || "TTU"}_${touchUpId || "TouchUp"}.${imageExtension}`);
-            const finalTouchUpLr = newImageBase64 ? { fileName: imageFileName, fileType: imageMimeType, base64: newImageBase64 } : existingTouchUpLr;
+            // ⭐ YELLOW STAR: UPDATED — SEND SELECTED TOUCH UP IMAGE AS BASE64 STRING ONLY
+            // Backend will save the image and return:
+            // { relativePath, fullUrl }
+            const finalTouchUpLr = newImageBase64 ? newImageBase64 : existingTouchUpLr;
 
             return {
                 transportTouchupNumber,
@@ -1123,17 +1123,15 @@ const CreateEditTripLREntry = () => {
 
                 const currentTransportTouchupNumber = String(current?.transportTouchupNumber || transportTouchupNumber || "").trim();
                 const currentTouchUpId = String(current?.touchUpId || touchUpId || "").trim();
-                const fallbackFileName = `${currentTransportTouchupNumber || "TTU"}_${currentTouchUpId || "TouchUp"}.${String(file.type || "").includes("png") ? "png" : "jpg"}`;
 
                 lrTouchUp[targetIndex] = {
                     ...current,
                     transportTouchupNumber: currentTransportTouchupNumber,
                     touchUpId: currentTouchUpId,
-                    touchUpLr: {
-                        fileName: sanitizeFileName(file.name || fallbackFileName, fallbackFileName),
-                        fileType: file.type || "image/jpeg",
-                        base64,
-                    },
+
+                    // ⭐ YELLOW STAR: UPDATED — KEEP SELECTED IMAGE AS BASE64 STRING
+                    // Existing LR save/update API will receive this Base64 value.
+                    touchUpLr: base64,
                 };
 
                 return { ...prev, lrTouchUp };
@@ -2055,6 +2053,7 @@ const CreateEditTripLREntry = () => {
 
             const resolvedLRTouchUps = resolveLRTouchUps(form.lrTouchUp || []);
             const payload = toTripLRCollectionPayload({ ...form, lrTouchUp: resolvedLRTouchUps }, overrides);
+            console.log("lr_payload",payload)
 
             /* ===================================================
                EDIT LR

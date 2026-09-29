@@ -2883,6 +2883,8 @@ const CreateEditDriverSettlement = ({
                         allocationVoucherNumber,
 
                         trip_order: transportOrderNumber,
+                        // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+                        trip_allocation: allocationVoucherNumber,
                         lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
                         driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                         customMasters: {
@@ -3003,6 +3005,8 @@ const CreateEditDriverSettlement = ({
                         allocationVoucherNumber,
 
                         trip_order: transportOrderNumber,
+                        // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+                        trip_allocation: allocationVoucherNumber,
                         lr_no: tripDetails?.lrNo === "-" ? "" : tripDetails?.lrNo || selectedLREntry?.lrNumber || "",
                         driver: tripDetails?.driverName || selectedLREntry?.driver?.driverName || driverDetail?.driverName || selectedDriver?.driverName || "",
                         customMasters: {
