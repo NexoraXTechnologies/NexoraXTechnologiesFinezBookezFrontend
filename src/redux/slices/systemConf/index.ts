@@ -589,6 +589,15 @@ const buildTransportationAccountingFields = (vehicleMasterCode: string) => [
         isSystemGenerated: true,
     },
     {
+        key: "trip_allocation",
+        label: "Trip Allocation",
+        type: "string",
+        isRequired: false,
+        isSearchable: true,
+        isFilterable: true,
+        isSystemGenerated: true,
+    },
+    {
         key: "lr_no",
         label: "LR No",
         type: "string",

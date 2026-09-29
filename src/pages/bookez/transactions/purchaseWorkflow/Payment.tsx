@@ -140,6 +140,7 @@ const getDefaultForm = () => ({
     paymentReferenceNumber: "",
     paidBy: "",
     trip_order: "",
+    trip_allocation: "", 
     lr_no: "",
     driver: "",
     vehicle_master: null,
@@ -354,7 +355,7 @@ const Payment = () => {
                     };
                 }
 
-                if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
+                if (["trip_order","trip_allocation" , "lr_no", "driver"].includes(normalizedFieldKey)) {
                     return {
                         ...field,
                         disabled: false,
@@ -1034,6 +1035,7 @@ const Payment = () => {
 
 
             trip_order: record?.trip_order || "",
+            trip_allocation: record?.trip_allocation || "",
             lr_no: record?.lr_no || "",
             driver: savedDriverOption?.value ?? record?.driver ?? "",
 
@@ -2036,6 +2038,7 @@ const Payment = () => {
                 : {}),
 
             trip_order: form?.trip_order || "",
+            trip_allocation: form?.trip_allocation || "",
             lr_no: form?.lr_no || "",
             driver: form?.driver || "",
 

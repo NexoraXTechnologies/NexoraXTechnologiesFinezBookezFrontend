@@ -107,6 +107,7 @@ const getDefaultForm = () => ({
     sOrderRemarks: "",
     isAutoPost: false,
     trip_order: "",
+    trip_allocation: "", // ⭐ ADDED
     lr_no: "",
     driver: "",
     driverName: "",
@@ -1852,6 +1853,11 @@ const SalesOrder = () => {
             trip_order:
                 record?.trip_order ||
                 record?.transportOrderNumber ||
+                "",
+
+            trip_allocation:
+                record?.trip_allocation ||
+                record?.allocationVoucherNumber ||
                 "",
 
             lr_no:
@@ -4007,6 +4013,10 @@ const SalesOrder = () => {
                 form?.trip_order ||
                 "",
 
+            trip_allocation:
+                form?.trip_allocation ||
+                "",
+
             lr_no:
                 form?.lr_no ||
                 "",
@@ -5823,31 +5833,25 @@ const SalesOrder = () => {
 
             <ListingModel
                 {...{
-                    show:
-                        downlaodPDF?.show,
+                    show: downlaodPDF?.show,
 
                     downlaodPDF,
 
-                    entryType:
-                        "sales-order",
+                    entryType: "sales-order",
 
                     setShow: () =>
                         setDownlaodPDF(
                             // @ts-ignore
                             () => ({
-                                show:
-                                    !downlaodPDF
-                                        ?.show,
+                                show: !downlaodPDF?.show,
                             })
                         ),
 
-                    rowData:
-                        downlaodPDF?.record,
+                    rowData: downlaodPDF?.record,
 
                     report,
 
-                    title:
-                        "Download Sales Order PDF",
+                    title: "Download Sales Order PDF",
                 }}
             />
         </div>

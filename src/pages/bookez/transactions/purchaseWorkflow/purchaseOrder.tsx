@@ -115,6 +115,7 @@ const getDefaultForm = () => ({
 
     transportOrderNumber: "",
     trip_order: "",
+    trip_allocation: "", // ⭐ ADDED
     lr_no: "",
     driver: "",
     driverName: "",
@@ -1426,6 +1427,11 @@ const PurchaseOrder = () => {
                 record?.transportOrderNumber ||
                 "",
 
+            trip_allocation:
+                record?.trip_allocation ||
+                record?.allocationVoucherNumber ||
+                "",
+
             lr_no:
                 record?.lr_no ||
                 record?.lrNumber ||
@@ -2371,6 +2377,10 @@ const PurchaseOrder = () => {
             trip_order:
                 form?.trip_order ||
                 form?.transportOrderNumber ||
+                "",
+
+            trip_allocation:
+                form?.trip_allocation ||
                 "",
 
             lr_no:

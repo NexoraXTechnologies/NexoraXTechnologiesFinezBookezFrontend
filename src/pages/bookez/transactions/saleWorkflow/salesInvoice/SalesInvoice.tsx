@@ -65,7 +65,7 @@ const defaultPagination = { offset: 0, limit: 10, totalDocs: 0, totalPages: 1, c
 // PARTIAL SALES ORDER: salesOrderPendingQuantity and salesOrderOrderedQuantity added only for frontend tracking
 const emptyProductRow = { id: Date.now(), sOrderNumber: "", productCode: "", productName: "", productId: "", productDescription: "", description: "", productHSNCode: "", remarks: "", quantity: "", salesOrderPendingQuantity: null, salesOrderOrderedQuantity: null, availableQuantity: null, productType: "", uom: "", unit: "", unitName: "", rate: "", gross: 0, grossAmount: 0, discount: "", discountPercentage: "", discountAmount: "", taxableAmount: 0, cgst: "", cgstPercentage: "", cgstAmount: 0, sgst: "", sgstPercentage: "", sgstAmount: 0, igst: "", igstPercentage: "", igstAmount: 0, taxAmount: 0, otherAmount: "", netAmount: 0, netTotal: 0, marginProduct: false, taxRate: "", nonTaxRate: "", taxGross: "", nonTaxGross: "", customMasters: {}, _inventoryBalanceVoucherId: "" };
 
-const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvSalesOrderVoucherNumber: "", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, trip_order: "", lr_no: "", driver: "", vehicleCode: "", vehicleName: "", vehicleNumber: "", vehicle_master: null, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
+const getDefaultForm = () => ({ sInvVoucherNumber: "AUTO", sInvSalesOrderVoucherNumber: "", sInvVoucherDate: todayYMD(), sInvCustomerCode: "", sInvCustomerName: "", sInvSalesAccount: "SA021", sInvStatus: "open", sInvDocStatus: "open", sInvRemark: "", sInvRemarks: "", isAutoPost: false, trip_order: "", trip_allocation: "", lr_no: "", driver: "", vehicleCode: "", vehicleName: "", vehicleNumber: "", vehicle_master: null, customMasters: {}, products: [{ ...emptyProductRow, id: Date.now() }], grossAmount: "0.00", discountAmount: "0.00", cgstAmount: "0.00", sgstAmount: "0.00", igstAmount: "0.00", taxAmount: "0.00", otherAmount: "0.00", netAmount: "0.00" });
 
 // const getRecords = (res: any) => {
 //     return Array.isArray(res?.items)
@@ -1434,6 +1434,7 @@ const SalesInVoice = () => {
 
                     // ⭐ TRANSPORTATION DATA — BODY
                     trip_order: item?.trip_order || record?.trip_order || record?.transportOrderNumber || "",
+                    trip_allocation: item?.trip_allocation || item?.allocationVoucherNumber || record?.trip_allocation || record?.allocationVoucherNumber || "",
                     lr_no: item?.lr_no || record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || "",
                     vehicleCode: item?.vehicleCode || record?.vehicleCode || "",
                     vehicleName: item?.vehicleName || record?.vehicleName || "",
@@ -1543,6 +1544,7 @@ const SalesInVoice = () => {
             sInvRemarks: record?.sInvRemarks || record?.sInvRemark || "",
             isAutoPost: record?.isAutoPost || false,
             trip_order: record?.trip_order || record?.transportOrderNumber || firstInvoiceBody?.trip_order || "",
+            trip_allocation: record?.trip_allocation || record?.allocationVoucherNumber || firstInvoiceBody?.trip_allocation || firstInvoiceBody?.allocationVoucherNumber || "",
             lr_no: record?.lr_no || record?.lrNumber || record?.lrVoucherNumber || firstInvoiceBody?.lr_no || "",
             [driverField?.key || "driver"]: driverSelectValue,
             driverName: record?.driver || record?.driverName || firstInvoiceBody?.driverName || firstInvoiceBody?.driver || driverOption?.label || "",
@@ -2449,6 +2451,7 @@ const SalesInVoice = () => {
 
                     // ⭐ TRANSPORTATION DATA — BODY
                     trip_order: item?.trip_order || form?.trip_order || "",
+                    trip_allocation: item?.trip_allocation || form?.trip_allocation || "",
                     lr_no: item?.lr_no || form?.lr_no || "",
                     driver: bodyDriverName,
                     vehicleCode: bodyVehicleCode,
@@ -3053,6 +3056,27 @@ const SalesInVoice = () => {
                                     ?.dynamicBodyFields
                                     ?.nonTaxGross ??
                                 "",
+
+                            // ⭐ TRANSPORTATION DATA — BODY
+                            trip_order:
+                                item?.trip_order ||
+                                selectedPurchaseOrder?.trip_order ||
+                                selectedPurchaseOrder?.transportOrderNumber ||
+                                "",
+
+                            trip_allocation:
+                                item?.trip_allocation ||
+                                item?.allocationVoucherNumber ||
+                                selectedPurchaseOrder?.trip_allocation ||
+                                selectedPurchaseOrder?.allocationVoucherNumber ||
+                                "",
+
+                            lr_no:
+                                item?.lr_no ||
+                                selectedPurchaseOrder?.lr_no ||
+                                selectedPurchaseOrder?.lrNumber ||
+                                selectedPurchaseOrder?.lrVoucherNumber ||
+                                "",
                         })
                     );
                 })
@@ -3250,6 +3274,22 @@ const SalesInVoice = () => {
                 selectedPurchaseOrder
                     ?.isAutoPost ||
                 false,
+
+            trip_order:
+                selectedPurchaseOrder?.trip_order ||
+                selectedPurchaseOrder?.transportOrderNumber ||
+                "",
+
+            trip_allocation:
+                selectedPurchaseOrder?.trip_allocation ||
+                selectedPurchaseOrder?.allocationVoucherNumber ||
+                "",
+
+            lr_no:
+                selectedPurchaseOrder?.lr_no ||
+                selectedPurchaseOrder?.lrNumber ||
+                selectedPurchaseOrder?.lrVoucherNumber ||
+                "",
 
             customMasters:
                 selectedPurchaseOrder

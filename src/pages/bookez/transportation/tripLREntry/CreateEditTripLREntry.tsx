@@ -2528,8 +2528,8 @@ const CreateEditTripLREntry = () => {
 
     return (
         <div className="flex h-full w-full flex-col bg-card text-card-foreground shadow-sm">
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                <div className="flex items-center">
+            <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
+                <div className="flex min-w-0 items-center">
                     <button
                         type="button"
                         onClick={() => navigate(-1)}
@@ -2545,20 +2545,20 @@ const CreateEditTripLREntry = () => {
                             {pageTitle}
                         </h1>
 
-                        <p className="text-sm text-muted-foreground">
+                        <p className="line-clamp-2 text-xs text-muted-foreground sm:text-sm">
                             {pageDescription}
                         </p>
                     </div>
                 </div>
 
                 {loading && (
-                    <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                    <span className="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary sm:px-3 sm:text-xs">
                         {isView ? "Loading..." : "Saving..."}
                     </span>
                 )}
             </div>
 
-            <div className="flex-1 overflow-auto p-2 ">
+            <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-3">
                 <div className="space-y-4">
                     <FormSectionCard
                         title="1. Basic Information"
@@ -2571,7 +2571,7 @@ const CreateEditTripLREntry = () => {
 
                             {(form.lrTouchUp || []).length > 0 && (
                                 <div className="mt-4 overflow-hidden rounded-xl border border-border bg-muted/20">
-                                    <div className="flex items-center justify-between border-b border-border bg-background/80 px-3 py-2.5">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background/80 px-3 py-2.5">
                                         <div className="flex items-center gap-2">
                                             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><MapPin size={15} /></span>
                                             <div>
@@ -2601,8 +2601,8 @@ const CreateEditTripLREntry = () => {
                                             const hasPhoto = Boolean(imageSource);
 
                                             return (
-                                                <div key={item?.transportTouchupNumber ? `${item.transportTouchupNumber}__${item?.touchUpId || index}` : `${item?.touchUpId || "touchup"}__${index}`} className="group relative flex min-w-0 gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md">
-                                                    <div className="relative h-[82px] w-[98px] shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                                                <div key={item?.transportTouchupNumber ? `${item.transportTouchupNumber}__${item?.touchUpId || index}` : `${item?.touchUpId || "touchup"}__${index}`} className="group relative flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-3 shadow-sm transition hover:border-primary/30 hover:shadow-md sm:flex-row">
+                                                    <div className="relative h-[140px] w-full shrink-0 overflow-hidden rounded-lg border border-border bg-muted sm:h-[82px] sm:w-[98px]">
                                                         <TouchUpImagePreview source={imageSource} alt={`${item?.touchUpId || `Touch Up ${index + 1}`} LR`} />
 
                                                         <span className="absolute left-1.5 top-1.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-md bg-primary px-1 text-[10px] font-bold text-primary-foreground shadow-sm">
@@ -2663,7 +2663,7 @@ const CreateEditTripLREntry = () => {
                             )}
 
                             {!isView && (
-                                <div className="mt-3 max-w-xl rounded-lg border border-dashed border-primary/25 bg-primary/[0.025] p-3">
+                                <div className="mt-3 w-full max-w-xl rounded-lg border border-dashed border-primary/25 bg-primary/[0.025] p-3">
                                     {renderField({
                                         field: {
                                             key: "transportTouchUp",
@@ -2687,7 +2687,7 @@ const CreateEditTripLREntry = () => {
                         title="2. Customer & Locations"
                         icon={<MapPin size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-5 gap-4">
+                        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:col-span-2 xl:col-span-4">
 
                             {renderFields(customerLocationFields)}
                         </div>
@@ -2697,7 +2697,7 @@ const CreateEditTripLREntry = () => {
                         title="3. Vehicle & Driver"
                         icon={<Users size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:col-span-2 xl:col-span-4">
                             <div className="rounded-lg border border-border bg-background p-3">
                                 <p className="text-xs font-bold text-muted-foreground">
                                     Vehicle Number
@@ -2752,7 +2752,7 @@ const CreateEditTripLREntry = () => {
                         title="4. Route Details"
                         icon={<Navigation size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-4 gap-4">
+                        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:col-span-2 xl:col-span-4">
 
                             {renderFields(routeFields)}
                         </div>
@@ -2762,7 +2762,7 @@ const CreateEditTripLREntry = () => {
                         title="5. Goods / Cargo Details"
                         icon={<Package size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-5 gap-4">
+                        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 md:col-span-2 xl:col-span-4">
 
                             {renderFields(cargoFields)}
                         </div>
@@ -2772,16 +2772,16 @@ const CreateEditTripLREntry = () => {
                         title="6. Freight & Charges"
                         icon={<CreditCard size={18} />}
                     >
-                        <div className="md:col-span-2 xl:col-span-4 grid w-full grid-cols-4 gap-2">
+                        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 md:col-span-2 xl:col-span-4">
 
                             {renderFields(freightFields)}
 
-                            <div className="flex items-center justify-between h-8 rounded-sm border border-border bg-background px-3 mt-6">
+                            <div className="mt-0 flex min-h-10 items-center justify-between gap-2 rounded-sm border border-border bg-background px-3 sm:mt-6 xl:min-h-8">
                                 <p className="text-xs font-bold text-muted-foreground">
                                     Balance Payable (₹)
                                 </p>
 
-                                <p className="text-lg font-bold text-card-foreground">
+                                <p className="shrink-0 text-base font-bold text-card-foreground sm:text-lg">
                                     ₹ {formatIndianNumber(balancePayable)}
                                 </p>
                             </div>
@@ -2873,12 +2873,12 @@ const CreateEditTripLREntry = () => {
                 </div>
             </div>
 
-            <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 border-t border-border bg-card px-4 py-3">
+            <div className="sticky bottom-0 z-20 flex flex-col-reverse items-stretch justify-end gap-2 border-t border-border bg-card px-3 py-3 sm:flex-row sm:items-center sm:px-4">
                 <button
                     type="button"
                     onClick={() => navigate(-1)}
                     disabled={loading}
-                    className="rounded-md border border-border bg-background px-4 py-2 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:opacity-60"
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-sm font-bold text-card-foreground transition hover:bg-muted disabled:opacity-60 sm:w-auto"
                 >
                     {isView ? "Close" : "Cancel"}
                 </button>
@@ -2888,7 +2888,7 @@ const CreateEditTripLREntry = () => {
                         type="button"
                         onClick={handleSaveAndStart}
                         disabled={loading}
-                        className="rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                        className="w-full rounded-md bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60 sm:w-auto"
                     >
                         {loading
                             ? "Saving..."
@@ -2900,8 +2900,8 @@ const CreateEditTripLREntry = () => {
             </div>
 
             {!isView && showDocModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4">
+                    <div className="my-auto w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-xl">
                         <div className="mb-3 flex items-center justify-between">
                             <h2 className="text-base font-bold text-card-foreground">
                                 Add Document
