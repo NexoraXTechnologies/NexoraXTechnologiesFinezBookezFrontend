@@ -29,6 +29,7 @@ import {
 	Factory,
 	ReceiptText,
 	ScanLine,
+	FilePenLine,
 } from "lucide-react";
 import ConfirmTooltip from "./common/ConfirmTooltip";
 import EZLogo from "../assets/Logo.EZ.png";
@@ -313,7 +314,14 @@ const ProfessionalSidebar = ({ onMenuItemsChange, onMobileClose }: any) => {
 						permissionKey: "companyMasterTab",
 						action: "view",
 					},
-
+					{
+						name: "Report Template",
+						path: "/report-template",
+						icon: <FilePenLine size={20} />,
+						module: "reportTemplate",
+						permissionKey: "reportTemplate",
+						action: "view",
+					},
 					{
 						name: "Add Team/Employee",
 						path: "/users",

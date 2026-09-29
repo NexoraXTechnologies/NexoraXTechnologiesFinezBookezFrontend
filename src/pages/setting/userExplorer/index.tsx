@@ -158,6 +158,7 @@ const UserExplorer = ({ onAccessSuccess }: any) => {
             search: debouncedSearch
         }) as any);
     };
+
     const fetchDbAccessRequestsWithParams = async ({ offset = localOffset, limit = localLimit, searchValue = debouncedSearch }: any = {}) => {
         await dispatch(getDbAccessRequests({
             offset,

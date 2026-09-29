@@ -131,7 +131,8 @@ import gstVerifyReducer from "./slices/professionalSlice/gstVerify";
 import profitAndLossReducer from "./slices/professionalSlice/accountStatment";
 import multiSalesInvoiceReducer from "./slices/professionalSlice/salesWorkflow/multiInvoice";
 import multiPurchaseInvoiceReducer from "./slices/professionalSlice/purchaseWorkflow/multiInvoice";
-
+import reportTemplateReducer from "./slices/professionalSlice/reportTemplateSlice";
+import downloadReportPdfReducer from "./slices/professionalSlice/generatePdfApi"
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -266,7 +267,9 @@ export const store = configureStore({
     barcodeQr: barcodeQrReducer,
     multiPurchaseInvoice: multiPurchaseInvoiceReducer,
     multiSalesInvoice: multiSalesInvoiceReducer,
-    gstVerify: gstVerifyReducer
+    gstVerify: gstVerifyReducer,
+    reportTemplate: reportTemplateReducer, // ⭐ UPDATED
+    downloadReportPdf: downloadReportPdfReducer,
   },
 });
 

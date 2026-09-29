@@ -92,6 +92,7 @@ import CreateEditTouchUP from './pages/bookez/transportation/touchUP/CreateEditT
 import IndentList from './pages/bookez/transportation/indent/IndentList';
 import CreateEditIndent from './pages/bookez/transportation/indent/CreateEditIndent';
 import AccountStatement from './pages/bookez/accountStatment';
+import ReportTemplate from './pages/setting/reportTemplate';
 
 function App() {
   useAppearance();
@@ -270,7 +271,7 @@ function App() {
           <Route path="incometax/resetitrpassword" element={<ResetitrPassword />} />
           {/* configuration */}
           <Route path="configuration" element={<Configuration />} />
-
+          <Route path="report-template" element={<ReportTemplate />} />
           <Route
             path="/bookez/transportation/transport-order/create"
             element={<CreateTransportOrder />}

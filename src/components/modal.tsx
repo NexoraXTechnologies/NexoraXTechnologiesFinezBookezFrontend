@@ -15,6 +15,8 @@ import { getCitiesByState, getStates } from "../redux/slices/professionalSlice/s
 import { SelectInput, TextArea, TextInput, ToggleInput } from "./inputs";
 import professionalAxios from "../services/professionalAxios";
 import { getGSTNumberDetails } from "../redux/slices/professionalSlice/gstVerify";
+import { downloadReportPdf, REPORT_TEMPLATE_CODES } from "../redux/slices/professionalSlice/generatePdfApi";
+import { buildPdfCalculations } from "../utils/pdf/pdfCalculations";
 
 type ModalProps = {
     show: boolean;
@@ -205,39 +207,173 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
     const autoPrintDoneRef = useRef(false);
     const isReportDownload = Array.isArray(report) && report.length > 0;
 
-    const handleLocalPdfPrint = async (forcedGstType?: string) => {
-        const finalGstType = forcedGstType || gstType;
+    // const handleLocalPdfPrint = async (forcedGstType?: string) => {
+    //     const finalGstType = forcedGstType || gstType;
 
-        if (!finalGstType) return toast.warn("Select With GST Or Without GST");
+    //     if (!finalGstType) return toast.warn("Select With GST Or Without GST");
+    //     if (!Object.keys(company || {})?.length) return toast.error("Add Company Details");
+    //     console.log({ rowData })
+
+    //     try {
+    //         const includeGst = finalGstType === "With GST";
+    //         const normalized: any = normalizeDoc(rowData);
+    //         const footer = normalized?.footer || {};
+    //         const invoiceNo = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || "";
+    //         const amount = footer?.totalNetAmount || footer?.netAmount || footer?.balanceAmount || rowData?.sInvFooter?.totalNetAmount || rowData?.sInvFooter?.netAmount || rowData?.sQuoteFooter?.totalNetAmount || rowData?.sQuoteFooter?.netAmount || 0;
+    //         const companyUpiId = company?.upiId || company?.upiID || company?.companyUpiId || company?.upi || "";
+    //         let upiUrl = "";
+    //         let upiQrUri = "";
+
+    //         if (entryType === "sales-invoice" && companyUpiId) {
+    //             upiUrl = buildUpiLink({ upiId: companyUpiId, amount, invoiceNo, name: company?.companyName || company?.businessName || "" });
+    //             upiQrUri = await generateQrDataUrl(upiUrl);
+    //         }
+    //         const htmlContent = buildPdfHtml({ ...company, selectedAccount, rowData, includeGst, primaryColor: "#1E88E5", entryType, gstType: finalGstType, upiId: companyUpiId, upiUrl, upiQrUri });
+
+    //         printHtmlUsingIframe(htmlContent);
+    //         setShow(false);
+    //         setGstType("");
+    //         setSelectedTemplate(null);
+    //         setSelectedExternal(false);
+    //     } catch (error) {
+    //         console.log("Local PDF print failed:", error);
+    //     }
+    // };
+
+    const handleLocalPdfPrint = async (forcedGstType?: string) => {
+        // ⭐ UPDATED
+        const normalizedEntryType = String(entryType || "").toLowerCase();
+        const isReceiptPayment = ["receipt", "payment"].includes(normalizedEntryType);
+
+        // ⭐ UPDATED - receipt/payment should not get blocked by GST selection
+        const finalGstType = forcedGstType || gstType || (isReceiptPayment ? "Without GST" : "");
+
+        if (!isReceiptPayment && !finalGstType) return toast.warn("Select With GST Or Without GST");
         if (!Object.keys(company || {})?.length) return toast.error("Add Company Details");
-        console.log({ rowData })
 
         try {
             const includeGst = finalGstType === "With GST";
+
+            // ⭐ UPDATED - RECEIPT / PAYMENT KEEP FRONTEND HTML PDF
+            if (isReceiptPayment) {
+                const htmlContent = buildPdfHtml({
+                    ...company,
+                    selectedAccount,
+                    rowData,
+                    includeGst,
+                    primaryColor: "#1E88E5",
+                    entryType,
+                    gstType: finalGstType,
+                });
+
+                printHtmlUsingIframe(htmlContent);
+
+                setShow(false);
+                setGstType("");
+                setSelectedTemplate(null);
+                setSelectedExternal(false);
+
+                return;
+            }
+
+            // ⭐ UPDATED - OTHER VOUCHERS USE BACKEND PDF
+            setLoader(true);
+
             const normalized: any = normalizeDoc(rowData);
             const footer = normalized?.footer || {};
             const invoiceNo = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || "";
-            const amount = footer?.totalNetAmount || footer?.netAmount || footer?.balanceAmount || rowData?.sInvFooter?.totalNetAmount || rowData?.sInvFooter?.netAmount || rowData?.sQuoteFooter?.totalNetAmount || rowData?.sQuoteFooter?.netAmount || 0;
-            const companyUpiId = company?.upiId || company?.upiID || company?.companyUpiId || company?.upi || "";
-            let upiUrl = "";
-            let upiQrUri = "";
 
-            if (entryType === "sales-invoice" && companyUpiId) {
-                upiUrl = buildUpiLink({ upiId: companyUpiId, amount, invoiceNo, name: company?.companyName || company?.businessName || "" });
-                upiQrUri = await generateQrDataUrl(upiUrl);
+            if (!invoiceNo) {
+                toast.error("Voucher number not found");
+                return;
             }
-            const htmlContent = buildPdfHtml({ ...company, selectedAccount, rowData, includeGst, primaryColor: "#1E88E5", entryType, gstType: finalGstType, upiId: companyUpiId, upiUrl, upiQrUri });
 
-            printHtmlUsingIframe(htmlContent);
+            const {
+                items,
+                totalQty,
+                subTotal,
+                discountAmt,
+                cgstAmt,
+                sgstAmt,
+                igstAmt,
+                pdfGrandTotal,
+                amountWords,
+            } = buildPdfCalculations({
+                itemsRaw: normalized?.body || [],
+                footer,
+                unitMap: {},
+            });
+
+            const pdfData = {
+                documentTitle: String(entryType || "voucher").replace(/-/g, " ").toUpperCase(),
+                voucherNumber: invoiceNo,
+                voucherDate: normalized?.docDate || "",
+                companyName: company?.companyName || company?.businessName || "",
+                companyAddress: company?.companyAddress || company?.address || "",
+                companyPhone: company?.companyPhone || company?.companyMobile || company?.mobileNumber || company?.mobile || "",
+                companyEmail: company?.companyEmail || company?.email || "",
+                companyGstin: includeGst ? company?.gstNumber || company?.gstin || company?.companyGstin || "" : "",
+                customerName: selectedAccount?.accountName || "",
+                showGst: includeGst,
+                items: (items || []).map((item: any, index: number) => ({
+                    index: index + 1,
+                    itemName: item?.productName || item?.itemName || "",
+                    hsn: item?.productHSNCode || item?.hsnCode || item?.hsn || "",
+                    unit: item?.uomLabel || item?.uom || item?.unit || "",
+                    quantity: Number(item?.qty ?? item?.quantity ?? 0),
+                    rate: Number(item?.rate || 0),
+                    hasGst: includeGst && (
+                        Number(item?.cgstPercentage ?? item?.cgst ?? 0) > 0 ||
+                        Number(item?.sgstPercentage ?? item?.sgst ?? 0) > 0 ||
+                        Number(item?.igstPercentage ?? item?.igst ?? 0) > 0
+                    ),
+                    cgstPerc: includeGst ? Number(item?.cgstPercentage ?? item?.cgst ?? 0) : 0,
+                    sgstPerc: includeGst ? Number(item?.sgstPercentage ?? item?.sgst ?? 0) : 0,
+                    igstPerc: includeGst ? Number(item?.igstPercentage ?? item?.igst ?? 0) : 0,
+                    gstAmount: includeGst
+                        ? Number(item?.taxAmount ?? (
+                            Number(item?.cgstAmount || 0) +
+                            Number(item?.sgstAmount || 0) +
+                            Number(item?.igstAmount || 0)
+                        ))
+                        : 0,
+                    amount: Number(includeGst ? item?.net : item?.taxable) || 0,
+                })),
+                totalQuantity: Number(totalQty || 0),
+                grossAmount: Number(subTotal || 0),
+                discountAmount: Number(discountAmt || 0),
+                cgstAmount: includeGst ? Number(cgstAmt || 0) : 0,
+                sgstAmount: includeGst ? Number(sgstAmt || 0) : 0,
+                igstAmount: includeGst ? Number(igstAmt || 0) : 0,
+                netAmount: Number(pdfGrandTotal || 0),
+                amountInWords: amountWords || "",
+            };
+
+            console.log("PDF API Payload:", {
+                templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
+                voucherNumber: invoiceNo,
+                pdfData,
+            });
+
+            // ⭐ UPDATED - BACKEND PDF
+            await dispatch(downloadReportPdf({
+                templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
+                voucherNumber: invoiceNo,
+                pdfData,
+            })).unwrap();
+
             setShow(false);
             setGstType("");
             setSelectedTemplate(null);
             setSelectedExternal(false);
-        } catch (error) {
-            console.log("Local PDF print failed:", error);
+        } catch (error: any) {
+            console.error("PDF download failed:", error);
+            toast.error(error?.message || "PDF download failed");
+        } finally {
+            // ⭐ UPDATED
+            setLoader(false);
         }
     };
-
     const handleServerPdfDownload = async () => {
         try {
             if (!selectedTemplate?.templateFileId) {
@@ -318,10 +454,10 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
         autoPrintDoneRef.current = true;
         handleLocalPdfPrint("With GST");
     }, [show, GstToggle, isReportDownload, company]);
-
     if (!show) return null;
+    
+    console.log({ GstToggle, isReportDownload })
     if (GstToggle && !isReportDownload) return null;
-
     return (
         <AnimatePresence>
             <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
