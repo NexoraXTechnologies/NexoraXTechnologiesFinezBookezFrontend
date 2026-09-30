@@ -476,7 +476,7 @@ const RouteLocationBlock = ({
 	// };
 
 	return (
-		<div className="mb-2 rounded-lg border border-border bg-background p-2">
+		<div className="mb-2 min-w-0 rounded-lg border border-border bg-background p-2 sm:p-3">
 			{/* <h4 className="mb-2 font-semibold text-primary">
 				{side === "from" ? "📍" : "🏁"} {label} Details
 			</h4> */}
@@ -499,7 +499,7 @@ const RouteLocationBlock = ({
 				onSelectAddress={handleAddressSelect}
 			/>
 
-			<div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+			<div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
 				{renderField({
 					field: {
 						key: `${side}StateCode`,
@@ -537,7 +537,7 @@ const RouteLocationBlock = ({
 							onFieldChange(`${side}Address`, e.target.value)
 						}
 						placeholder={`Enter ${label.toLowerCase()} address`}
-						className="min-h-[105px] w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary"
+						className="min-h-[90px] w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground outline-none transition focus:border-primary sm:min-h-[105px]"
 					/>
 				</div>
 			</div>
@@ -573,7 +573,7 @@ const ExistingDocumentsList = ({ documents, onRemove }: any) => {
 					return (
 						<div
 							key={doc?.id || doc?._id || `${docName}-${docIndex}`}
-							className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/30 px-3 py-2"
+							className="flex flex-col items-stretch justify-between gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
 						>
 							<div className="flex min-w-0 items-center gap-2">
 								<FileText
@@ -588,7 +588,7 @@ const ExistingDocumentsList = ({ documents, onRemove }: any) => {
 								</span>
 							</div>
 
-							<div className="flex shrink-0 items-center gap-1">
+							<div className="flex shrink-0 items-center justify-end gap-1">
 								{/* <button
 									type="button"
 									disabled={!docUrl}
@@ -1097,8 +1097,8 @@ const CreateEditTransportContract = () => {
 
 	return (
 		<div className="flex h-full w-full flex-col bg-background text-foreground">
-			<header className="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-4">
-				<div className="flex items-center">
+			<header className="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 sm:px-4">
+				<div className="flex min-w-0 items-center">
 					<button
 						type="button"
 						onClick={() => navigate(-1)}
@@ -1107,19 +1107,19 @@ const CreateEditTransportContract = () => {
 					>
 						<ArrowLeft size={20} />
 					</button>
-					<div>
-						<h1 className="truncate text-lg font-bold text-card-foreground">
+					<div className="min-w-0">
+						<h1 className="truncate text-base font-bold text-card-foreground sm:text-lg">
 							{pageTitle}
 						</h1>
 
-						<p className=" text-sm text-muted-foreground">
+						<p className="line-clamp-2 text-xs text-muted-foreground sm:text-sm">
 							{pageDescription}
 						</p>
 					</div>
 				</div>
 			</header>
 
-			<main className="flex-1 overflow-auto  pb-28 sm:p-2">
+			<main className="min-h-0 flex-1 overflow-auto px-2 pb-32 pt-2 sm:p-3 sm:pb-28">
 				<div className="flex flex-col gap-4">
 					<SectionCard
 						index={1}
@@ -1128,13 +1128,13 @@ const CreateEditTransportContract = () => {
 						expanded={expandedSections.contractDetails}
 						onToggle={() => toggleSection("contractDetails")}
 					>
-						<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
+						<div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:col-span-2 xl:col-span-3">
 
 							{renderFields(contractDetailsFields)}
 						</div>
 					</SectionCard>
 
-					<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 
 						<SectionCard
 							index={2}
@@ -1143,7 +1143,7 @@ const CreateEditTransportContract = () => {
 							expanded={expandedSections.contractPeriod}
 							onToggle={() => toggleSection("contractPeriod")}
 						>
-							<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
+							<div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2 xl:col-span-3">
 								{renderFields(contractPeriodFields)}
 							</div>
 						</SectionCard>
@@ -1155,7 +1155,7 @@ const CreateEditTransportContract = () => {
 							expanded={expandedSections.billingTerms}
 							onToggle={() => toggleSection("billingTerms")}
 						>
-							<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-2 gap-4">
+							<div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-2 xl:col-span-3">
 
 								{renderFields(billingTermsFields)}
 							</div>
@@ -1170,7 +1170,7 @@ const CreateEditTransportContract = () => {
 						expanded={expandedSections.tripCommitment}
 						onToggle={() => toggleSection("tripCommitment")}
 					>
-						<div className="md:col-span-2 xl:col-span-3 grid w-full grid-cols-4 gap-4">
+						<div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 md:col-span-2 xl:col-span-3">
 
 							{renderFields(tripCommitmentFields)}
 						</div>
@@ -1188,9 +1188,9 @@ const CreateEditTransportContract = () => {
 								{(form.routes || []).map((row: any, index: number) => (
 									<div
 										key={row.id || `route-${index}`}
-										className="rounded-lg border border-border bg-muted/30 p-4"
+										className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4"
 									>
-										<div className="mb-4 flex items-center justify-between">
+										<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
 											<h3 className="text-sm font-bold">
 												Route {index + 1}
 											</h3>
@@ -1230,12 +1230,12 @@ const CreateEditTransportContract = () => {
 										</div>
 
 										{/* ================= Route Information ================= */}
-										<div className="rounded-lg border border-border bg-background p-4">
+										<div className="rounded-lg border border-border bg-background p-3 sm:p-4">
 											{/* <h4 className="mb-4 font-semibold text-primary">
 												🚚 Route Information
 											</h4> */}
 
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+											<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
 												{routeFields.map((field: any) =>
 													renderField({
 														field,
@@ -1253,11 +1253,11 @@ const CreateEditTransportContract = () => {
 									</div>
 								))}
 
-								<div className="flex justify-end">
+								<div className="flex justify-stretch sm:justify-end">
 									<button
 										type="button"
 										onClick={addRouteRow}
-										className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15"
+										className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/15 sm:h-8 sm:w-auto"
 									>
 										<Plus size={14} />
 										Add Route
@@ -1293,12 +1293,12 @@ const CreateEditTransportContract = () => {
 				</div>
 			</main>
 
-			<footer className="sticky bottom-0 z-20 flex flex-col gap-3 border-t border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
+			<footer className="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-border bg-card p-3 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:p-4">
 				<button
 					type="button"
 					onClick={() => navigate(-1)}
 					disabled={loading}
-					className="inline-flex h-10 items-center justify-center rounded-md border border-primary bg-background px-5 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+					className="inline-flex h-10 w-full items-center justify-center rounded-md border border-primary bg-background px-5 text-sm font-bold text-primary transition hover:bg-primary/10 disabled:opacity-60 sm:w-auto"
 				>
 					Cancel
 				</button>
@@ -1307,7 +1307,7 @@ const CreateEditTransportContract = () => {
 					type="button"
 					onClick={() => persistContract("draft")}
 					disabled={loading}
-					className="inline-flex h-10 items-center justify-center rounded-md border border-warning bg-background px-5 text-sm font-semibold text-warning transition hover:bg-warning/10 disabled:opacity-60"
+					className="inline-flex h-10 w-full items-center justify-center rounded-md border border-warning bg-background px-5 text-sm font-semibold text-warning transition hover:bg-warning/10 disabled:opacity-60 sm:w-auto"
 				>
 					Save as Draft
 				</button>
@@ -1316,7 +1316,7 @@ const CreateEditTransportContract = () => {
 					type="button"
 					onClick={() => persistContract("active")}
 					disabled={loading}
-					className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+					className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60 sm:w-auto"
 				>
 					<Save size={17} />
 					{loading ? "Saving..." : isEdit ? "Update" : "Save"}

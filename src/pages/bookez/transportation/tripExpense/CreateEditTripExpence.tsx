@@ -58,7 +58,10 @@ import {
 } from "../../../../redux/slices/professionalSlice/transportation/eWayBillSlice";
 import { createSalesInvoice } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesInvoiceSlice";
 import { createSalesOrder } from "../../../../redux/slices/professionalSlice/salesWorkflow/salesOrderSlice";
-import { addPurchaseInvoice } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
+import {
+    addPurchaseInvoice,
+    updatePurchaseInvoice,
+} from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseInvoiceSlice";
 import { addPurchaseOrder } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/purchaseOrder";
 import { addGrn } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/grnSlice";
 import { addPayment } from "../../../../redux/slices/professionalSlice/purchaseWorkflow/paymentSlice";
@@ -1094,7 +1097,214 @@ const resolveCashInHandAccount = async (dispatch: any) => {
     };
 };
 
-// ⭐ YELLOW STAR: ADDED — HIRED VEHICLE ADVANCE TO VENDOR PAYMENT
+// ⭐ YELLOW STAR: ADDED — NORMALIZE PURCHASE INVOICE RESPONSE FOR TRIP PAYMENT REFERENCE
+const normalizeTripPurchaseInvoiceDoc = (raw: any) => {
+    if (!raw || typeof raw !== "object") {
+        return {};
+    }
+
+    const inner =
+        raw?.invoice ||
+        raw?.data ||
+        raw?.purchaseInvoice;
+
+    const merged = {
+        ...raw,
+    };
+
+    if (
+        inner &&
+        typeof inner === "object" &&
+        !Array.isArray(inner)
+    ) {
+        Object.assign(
+            merged,
+            inner
+        );
+    }
+
+    return merged;
+};
+
+// ⭐ YELLOW STAR: ADDED — LOAD PURCHASE INVOICE DETAILS BEFORE AUTO PAYMENT
+// This mirrors the existing Purchase Payment reference behavior without changing
+// Contract / Indent payments that do not have a Purchase Invoice.
+const getTripPurchaseInvoiceReferenceDetails = async (
+    purchaseInvoiceVoucherNumber: string
+) => {
+    const voucherNumber = String(
+        purchaseInvoiceVoucherNumber || ""
+    ).trim();
+
+    if (!voucherNumber) {
+        return null;
+    }
+
+    const response = await professionalAxios.get(
+        `/eTaxSolnMongoApiBackend/users/bookez/purchaseFlow/purchaseInvoice/getByVoucherNumber/${encodeURIComponent(
+            voucherNumber
+        )}`
+    );
+
+    if (!response?.data?.success) {
+        throw new Error(
+            response?.data?.message ||
+            `Purchase invoice not found: ${voucherNumber}`
+        );
+    }
+
+    const invoice = normalizeTripPurchaseInvoiceDoc(
+        response?.data?.data
+    );
+
+    if (
+        !invoice ||
+        Object.keys(invoice).length === 0
+    ) {
+        throw new Error(
+            `Purchase invoice not found: ${voucherNumber}`
+        );
+    }
+
+    const footer =
+        invoice?.pInvFooter ||
+        invoice?.purchaseInvoiceFooter ||
+        invoice?.footer ||
+        {};
+
+    const netAmount = Number(
+        footer?.netAmount ||
+        invoice?.netAmount ||
+        invoice?.billAmount ||
+        invoice?.amount ||
+        0
+    );
+
+    const adjustedAmount = Number(
+        footer?.adjustedAmount ??
+        invoice?.adjustedAmount ??
+        0
+    );
+
+    const storedBalance = Number(
+        footer?.balanceAmount ??
+        footer?.remainingAmount ??
+        footer?.remainingBillAmount ??
+        invoice?.balanceAmount ??
+        invoice?.remainingAmount ??
+        invoice?.remainingBillAmount ??
+        NaN
+    );
+
+    const balanceAmount =
+        Number.isFinite(storedBalance) && storedBalance >= 0
+            ? storedBalance
+            : netAmount - adjustedAmount;
+
+    const invoiceDate =
+        invoice?.pInvVoucherDate ||
+        invoice?.purchaseInvoiceDate ||
+        invoice?.voucherDate ||
+        invoice?.invoiceDate ||
+        invoice?.docDate ||
+        "";
+
+    return {
+        invoice,
+        footer,
+        voucherNumber,
+        invoiceDate,
+        netAmount,
+        adjustedAmount,
+        balanceAmount,
+    };
+};
+
+// ⭐ YELLOW STAR: ADDED — APPLY TRIP AUTO PAYMENT AGAINST PURCHASE INVOICE
+// Same calculation used by the normal Payment screen:
+// new adjusted = old adjusted + payment adjustment
+// new balance  = invoice net - new adjusted
+const applyTripPaymentToPurchaseInvoice = async ({
+    dispatch,
+    referenceDetails,
+    adjustedAmount,
+}: any) => {
+    if (!referenceDetails) {
+        return;
+    }
+
+    const adjustment = Number(
+        adjustedAmount || 0
+    );
+
+    if (!(adjustment > 0)) {
+        return;
+    }
+
+    const previousBalanceAmount = Number(
+        referenceDetails?.balanceAmount || 0
+    );
+
+    if (adjustment > previousBalanceAmount) {
+        throw new Error(
+            `Adjusted amount cannot exceed remaining amount ₹${formatIndianNumber(
+                previousBalanceAmount
+            )} for ${referenceDetails?.voucherNumber || ""}`
+        );
+    }
+
+    const invoiceNetAmount = Number(
+        referenceDetails?.netAmount || 0
+    );
+
+    const previousAdjustedAmount = Number(
+        referenceDetails?.adjustedAmount || 0
+    );
+
+    const nextAdjustedAmount =
+        previousAdjustedAmount + adjustment;
+
+    const nextBalanceAmount =
+        invoiceNetAmount - nextAdjustedAmount;
+
+    if (nextBalanceAmount < 0) {
+        throw new Error(
+            `Adjusted amount cannot exceed invoice amount for ${referenceDetails?.voucherNumber || ""}`
+        );
+    }
+
+    await unwrapThunk(
+        dispatch,
+        updatePurchaseInvoice({
+            purchaseInvoiceNumber:
+                referenceDetails.voucherNumber,
+            payload: {
+                pInvFooter: {
+                    ...(referenceDetails?.footer || {}),
+                    netAmount: String(
+                        invoiceNetAmount
+                    ),
+                    adjustedAmount: String(
+                        nextAdjustedAmount
+                    ),
+                    balanceAmount: String(
+                        nextBalanceAmount
+                    ),
+                },
+                pInvStatus:
+                    nextBalanceAmount <= 0
+                        ? "close"
+                        : "open",
+            },
+        })
+    );
+};
+
+// ⭐ YELLOW STAR: UPDATED — HIRED VEHICLE ADVANCE TO VENDOR PAYMENT
+// ONE TIME + HIRED:
+//   Purchase Invoice exists => Payment uses PINV reference and adjusts invoice balance.
+// CONTRACT / INDENT + HIRED:
+//   No Purchase Invoice => existing NEW / ADV reference remains unchanged.
 const createTripVendorAdvancePayment = async ({
     dispatch,
     context,
@@ -1120,8 +1330,75 @@ const createTripVendorAdvancePayment = async ({
     }
 
     const amount = formatInvoiceAmount(advanceAmount);
+
     const paymentDate = todayYMD();
+
     const remark = `Advance to Vendor - Trip ${context.tripId}`;
+
+    const normalizedPurchaseInvoiceVoucherNumber =
+        String(
+            purchaseInvoiceVoucherNumber || ""
+        ).trim();
+
+    // ⭐ YELLOW STAR: ADDED — ONLY ONE TIME + HIRED PASSES PURCHASE INVOICE HERE
+    const purchaseInvoiceReferenceDetails =
+        normalizedPurchaseInvoiceVoucherNumber
+            ? await getTripPurchaseInvoiceReferenceDetails(
+                normalizedPurchaseInvoiceVoucherNumber
+            )
+            : null;
+
+    if (
+        purchaseInvoiceReferenceDetails &&
+        advanceAmount >
+        Number(
+            purchaseInvoiceReferenceDetails.balanceAmount || 0
+        )
+    ) {
+        throw new Error(
+            `Adjusted amount cannot exceed remaining amount ₹${formatIndianNumber(
+                purchaseInvoiceReferenceDetails.balanceAmount
+            )} for ${normalizedPurchaseInvoiceVoucherNumber}`
+        );
+    }
+
+    // ⭐ YELLOW STAR: UPDATED — BUILD REFERENCE EXACTLY ACCORDING TO FLOW
+    const references =
+        purchaseInvoiceReferenceDetails
+            ? [
+                {
+                    referenceType: "PINV",
+                    purchaseInvoice:
+                        normalizedPurchaseInvoiceVoucherNumber,
+                    docDate:
+                        purchaseInvoiceReferenceDetails.invoiceDate ||
+                        paymentDate,
+                    billDueDate:
+                        purchaseInvoiceReferenceDetails.invoiceDate ||
+                        paymentDate,
+                    billAmount: String(
+                        purchaseInvoiceReferenceDetails.netAmount || 0
+                    ),
+                    netAmount: String(
+                        purchaseInvoiceReferenceDetails.netAmount || 0
+                    ),
+                    remainingBillAmount: String(
+                        purchaseInvoiceReferenceDetails.balanceAmount || 0
+                    ),
+                    adjustedAmount: amount,
+                },
+            ]
+            : [
+                {
+                    // Existing Contract / Indent behavior stays unchanged.
+                    referenceType: "NEW",
+                    newReference: "ADV",
+                    billDueDate: paymentDate,
+                    billAmount: amount,
+                    adjustedAmount: amount,
+                    purchaseInvoice: "",
+                },
+            ];
 
     const payload = {
         payVoucherNumber: "AUTO",
@@ -1144,24 +1421,17 @@ const createTripVendorAdvancePayment = async ({
                 amount,
                 netAmount: amount,
 
-                // Advance to Vendor remains an ADV/new reference.
-                // The existing Purchase Invoice is not adjusted by this advance entry.
-                references: [
-                    {
-                        referenceType: "NEW",
-                        newReference: "ADV",
-                        billDueDate: paymentDate,
-                        billAmount: amount,
-                        adjustedAmount: amount,
-                        purchaseInvoice: "",
-                    },
-                ],
+                // ⭐ YELLOW STAR: UPDATED — PINV WHEN INVOICE EXISTS, OTHERWISE EXISTING ADV
+                references,
 
-                customMasters: context.customMasters || {},
+                customMasters:
+                    context.customMasters || {},
                 remarks: remark,
             },
         ],
 
+        // Payment itself is fully adjusted by its reference,
+        // therefore Payment balance remains zero.
         payFooter: {
             netAmount: amount,
             adjustedAmount: amount,
@@ -1170,16 +1440,16 @@ const createTripVendorAdvancePayment = async ({
 
         sourceModule: "TRIP_EXECUTION",
         sourceVoucherNumber: context.tripId,
-        purchaseInvoiceVoucherNumber,
+        purchaseInvoiceVoucherNumber:normalizedPurchaseInvoiceVoucherNumber,
 
         transportOrderNumber: context.transportOrderNumber || "",
 
-        // ⭐ YELLOW STAR: ADDED — PRESERVE EXACT VEHICLE TRIP IN PAYMENT
+        // ⭐ YELLOW STAR: EXISTING — PRESERVE EXACT VEHICLE TRIP IN PAYMENT
         allocationVoucherNumber: context.allocationVoucherNumber || "",
 
         trip_order: context.transportOrderNumber || "",
 
-        // ⭐ YELLOW STAR: ADDED — EXACT TRIP ALLOCATION REFERENCE
+        // ⭐ YELLOW STAR: EXISTING — EXACT TRIP ALLOCATION REFERENCE
         trip_allocation: context.allocationVoucherNumber || "",
 
         lr_no: context.lrNo || "",
@@ -1196,6 +1466,19 @@ const createTripVendorAdvancePayment = async ({
 
         transactionPurpose: "ADVANCE_TO_VENDOR",
     };
+
+    // ⭐ YELLOW STAR: ADDED — KEEP SAME BEHAVIOR AS NORMAL PAYMENT SCREEN
+    // First apply the reference adjustment to the Purchase Invoice.
+    // Contract / Indent has no Purchase Invoice, so this block is skipped.
+    if (purchaseInvoiceReferenceDetails) {
+        await applyTripPaymentToPurchaseInvoice({
+            dispatch,
+            referenceDetails:
+                purchaseInvoiceReferenceDetails,
+            adjustedAmount:
+                advanceAmount,
+        });
+    }
 
     const response = await unwrapThunk(
         dispatch,

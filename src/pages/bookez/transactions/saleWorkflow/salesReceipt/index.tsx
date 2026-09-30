@@ -83,7 +83,7 @@ const emptyReceiptRow = { id: Date.now(), accountCode: "", accountName: "", amou
 
 const emptyReferenceRow = { id: Date.now(), saleInvoice: "", salesInvoice: "", docDate: "", netBillAmount: "", netReturnAmount: "", remainingBillAmount: "", adjustedAmount: "" };
 
-const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", paymentReferenceNumber: "", receivedBy: "", trip_order: "", lr_no: "", driver: "", vehicle_master: null, customMasters: {}, recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
+const getDefaultForm = () => ({ recVoucherNumber: "AUTO", recVoucherDate: todayYMD(), recAccountCode: "", recAccountName: "", recStatus: "open", recRemark: "", paymentMode: "", bankReferenceNumber: "", paymentReferenceNumber: "", receivedBy: "", trip_order: "", trip_allocation: "", lr_no: "", driver: "", vehicle_master: null, customMasters: {}, recBody: [{ ...emptyReceiptRow, id: Date.now() }], netAmount: "0.00", adjustedAmount: "0.00", balanceAmount: "0.00" });
 
 const SalesReceipt = () => {
     const dispatch = useDispatch<any>();
@@ -196,7 +196,7 @@ const SalesReceipt = () => {
                         };
                     }
 
-                    if (["trip_order", "lr_no", "driver"].includes(normalizedFieldKey)) {
+                    if (["trip_order", "trip_allocation", "lr_no", "driver"].includes(normalizedFieldKey)) {
                         return {
                             ...field,
                             disabled: false,
@@ -461,6 +461,7 @@ const SalesReceipt = () => {
             receivedBy: record?.receivedBy || "",
 
             trip_order: record?.trip_order || "",
+            trip_allocation: record?.trip_allocation || record?.allocationVoucherNumber || "",
             lr_no: record?.lr_no || "",
             driver: savedDriverOption?.value ?? record?.driver ?? "",
             vehicle_master: vehicleMaster
@@ -1079,9 +1080,11 @@ const SalesReceipt = () => {
             ...(editingRecord?.sourceModule ? { sourceModule: editingRecord.sourceModule } : {}),
             ...(editingRecord?.sourceVoucherNumber ? { sourceVoucherNumber: editingRecord.sourceVoucherNumber } : {}),
             ...(editingRecord?.transportOrderNumber ? { transportOrderNumber: editingRecord.transportOrderNumber } : {}),
+            ...(editingRecord?.allocationVoucherNumber ? { allocationVoucherNumber: editingRecord.allocationVoucherNumber } : {}),
             ...(editingRecord?.transactionPurpose ? { transactionPurpose: editingRecord.transactionPurpose } : {}),
 
             trip_order: form?.trip_order || "",
+            trip_allocation: form?.trip_allocation || "",
             lr_no: form?.lr_no || "",
             driver: form?.driver || "",
             customMasters: {

@@ -2322,6 +2322,24 @@ const CreateTripAllocation = ({
             return false;
         }
 
+        // ⭐ YELLOW STAR: ADDED — HIRED CHARGES MUST BE GREATER THAN OR EQUAL TO ADVANCE TO VENDOR
+        if (ownershipType === "hired") {
+            const hiredCharges = parseNumber(
+                form.vehicleSelection?.hiredCharges
+            );
+
+            const advanceToVendor = parseNumber(
+                form.vehicleSelection?.AdvanceToVendor
+            );
+
+            if (advanceToVendor > hiredCharges) {
+                toast.warn(
+                    "Advance to Vendor cannot be greater than Hired Charges"
+                );
+                return false;
+            }
+        }
+
         const chosenDriverAssignment =
             driverAssignmentMap[form.driverAllocation.driverId];
 
@@ -2740,6 +2758,7 @@ const CreateTripAllocation = ({
 
                                                                 <input
                                                                     type="number"
+                                                                    min="0"
                                                                     value={form.vehicleSelection?.hiredCharges ?? ""}
                                                                     disabled={isView}
                                                                     onChange={(e) =>
@@ -2763,6 +2782,14 @@ const CreateTripAllocation = ({
 
                                                                 <input
                                                                     type="number"
+                                                                    min="0"
+                                                                    max={
+                                                                        form.vehicleSelection?.hiredCharges !== "" &&
+                                                                        form.vehicleSelection?.hiredCharges !== null &&
+                                                                        form.vehicleSelection?.hiredCharges !== undefined
+                                                                            ? Number(form.vehicleSelection.hiredCharges)
+                                                                            : undefined
+                                                                    }
                                                                     value={form.vehicleSelection?.AdvanceToVendor ?? ""}
                                                                     disabled={isView}
                                                                     onChange={(e) =>
