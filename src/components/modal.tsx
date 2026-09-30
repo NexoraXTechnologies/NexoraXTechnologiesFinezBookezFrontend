@@ -405,6 +405,7 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
             setLoader(false);
         }
     };
+
     const handleServerPdfDownload = async () => {
         try {
             if (!selectedTemplate?.templateFileId) {
