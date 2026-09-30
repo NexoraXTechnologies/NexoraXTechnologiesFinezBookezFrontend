@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import DataTable from "../../../components/DataTable";
 import ReportFilterCard from "../reports/components/ReportFilterCard";
-import { clearBalanceSheetAnalysis, getBalanceSheetAnalysis } from "../../../redux/slices/professionalSlice/accountStatment";
+// ⭐ UPDATED
+import { clearBalanceSheetAnalysis, clearBalanceSheetFilterOptions, getBalanceSheetAnalysis, getBalanceSheetFilterOptions } from "../../../redux/slices/professionalSlice/accountStatment";
 import { getFirstDateOfCurrentMonth, todayYMD } from "../../../utils/helperFunctions";
 
 const formatAmount = (value: any) => Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -56,13 +57,73 @@ const BalanceSheet = () => {
     {}
   );
 
-  const { balanceSheet = null, balanceSheetLoading = false } = profitLossState;
+  // ⭐ UPDATED
+  const {
+    balanceSheet = null,
+    balanceSheetLoading = false,
+    balanceSheetFilterOptions = null,
+    balanceSheetFilterOptionsLoading = false
+  } = profitLossState;
 
   const [fromDate, setFromDate] = useState<string>(getFirstDateOfCurrentMonth());
   const [toDate, setToDate] = useState<string>(todayYMD());
   const [filtersOpen, setFiltersOpen] = useState(true);
+
+  // ⭐ UPDATED
+  const [customMasterValues, setCustomMasterValues] = useState<Record<string, string>>({});
+
   const [pdfLoading, setPdfLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
+
+  // ⭐ UPDATED - FILTER OPTIONS
+  const customMasterModules = useMemo(() => {
+    let filters: any[] = [];
+
+    if (Array.isArray(balanceSheetFilterOptions)) {
+      filters = balanceSheetFilterOptions;
+    } else if (Array.isArray(balanceSheetFilterOptions?.filters)) {
+      filters = balanceSheetFilterOptions.filters;
+    } else if (Array.isArray(balanceSheetFilterOptions?.data?.filters)) {
+      filters = balanceSheetFilterOptions.data.filters;
+    } else if (Array.isArray(balanceSheetFilterOptions?.data?.data?.filters)) {
+      filters = balanceSheetFilterOptions.data.data.filters;
+    } else if (Array.isArray(balanceSheetFilterOptions?.payload?.filters)) {
+      filters = balanceSheetFilterOptions.payload.filters;
+    }
+
+    return filters
+      .map((filter: any) => ({
+        moduleCode: String(filter?.moduleCode || "").trim(),
+        moduleName: String(filter?.moduleName || "").trim(),
+        description: String(filter?.description || "").trim(),
+        totalEntries: Number(filter?.totalEntries || 0),
+        options: Array.isArray(filter?.entries)
+          ? filter.entries
+            .map((entry: any) => ({
+              label: String(entry?.name || entry?.code || "").trim(),
+              value: String(entry?.code || "").trim()
+            }))
+            .filter((entry: any) => entry.label && entry.value)
+          : []
+      }))
+      .filter((filter: any) => filter.moduleName);
+  }, [balanceSheetFilterOptions]);
+
+  // ⭐ UPDATED - SELECTED CUSTOM MASTER FILTERS
+  const customMasterFilters = useMemo(() => {
+    return customMasterModules
+      .map((module: any) => {
+        const code = String(customMasterValues[module.moduleName] || "").trim();
+
+        if (!code) return null;
+
+        return {
+          moduleName: module.moduleName,
+          code
+        };
+      })
+      .filter(Boolean);
+  }, [customMasterModules, customMasterValues]);
 
   // BALANCE SHEET RESPONSE
   const balanceSheetData = balanceSheet?.data || balanceSheet || {};
@@ -93,16 +154,58 @@ const BalanceSheet = () => {
 
     if (exportType) payload.exportType = exportType;
 
+    // ⭐ UPDATED
+    if (customMasterFilters.length) payload.customMasterFilters = customMasterFilters;
+
     return payload;
   };
 
+  // ⭐ UPDATED - LOAD FILTER OPTIONS
   useEffect(() => {
     if (!fromDate || !toDate) return;
-    dispatch(getBalanceSheetAnalysis(buildPayload()) as any);
+
+    dispatch(getBalanceSheetFilterOptions({
+      fromDate: formatFromDate(fromDate),
+      toDate: formatToDate(toDate),
+      exportType: ""
+    }) as any);
   }, [dispatch, fromDate, toDate]);
+
+  // ⭐ UPDATED - LOAD ANALYSIS
+  useEffect(() => {
+    if (!fromDate || !toDate) return;
+
+    const payload: any = {
+      fromDate: formatFromDate(fromDate),
+      toDate: formatToDate(toDate)
+    };
+
+    if (customMasterFilters.length) payload.customMasterFilters = customMasterFilters;
+
+    dispatch(getBalanceSheetAnalysis(payload) as any);
+  }, [dispatch, fromDate, toDate, customMasterFilters]);
+
+  // ⭐ UPDATED - REMOVE INVALID SELECTED CUSTOM MASTER VALUE
+  useEffect(() => {
+    if (!customMasterModules.length) return;
+
+    setCustomMasterValues((previous) => {
+      const validModuleNames = new Set(customMasterModules.map((module: any) => module.moduleName));
+      const next: Record<string, string> = {};
+
+      Object.entries(previous).forEach(([moduleName, code]) => {
+        if (validModuleNames.has(moduleName)) next[moduleName] = code;
+      });
+
+      return next;
+    });
+  }, [customMasterModules]);
 
   useEffect(() => () => {
     dispatch(clearBalanceSheetAnalysis());
+
+    // ⭐ UPDATED
+    dispatch(clearBalanceSheetFilterOptions());
   }, [dispatch]);
 
   const downloadBlobFile = (blob: Blob, fileName: string) => {
@@ -146,7 +249,25 @@ const BalanceSheet = () => {
 
   const filterFields: any[] = [
     { key: "fromDate", type: "date", label: "From Date", value: fromDate, onChange: (value: string) => setFromDate(value), required: true },
-    { key: "toDate", type: "date", label: "To Date", value: toDate, onChange: (value: string) => setToDate(value), required: true }
+    { key: "toDate", type: "date", label: "To Date", value: toDate, onChange: (value: string) => setToDate(value), required: true },
+
+    // ⭐ UPDATED
+    ...customMasterModules.map((module: any) => ({
+      key: module.moduleCode || module.moduleName,
+      type: "select",
+      label: module.moduleName,
+      placeholder: module.options.length ? `All ${module.moduleName}` : `No ${module.moduleName} available`,
+      value: customMasterValues[module.moduleName] || "",
+      options: module.options,
+      disabled: balanceSheetFilterOptionsLoading,
+      required: false,
+      onChange: (value: string) => {
+        setCustomMasterValues((previous) => ({
+          ...previous,
+          [module.moduleName]: value
+        }));
+      }
+    }))
   ];
 
   return (
@@ -156,6 +277,7 @@ const BalanceSheet = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-background/50 backdrop-blur-[1px]">
             <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="flex items-center gap-2.5 rounded-lg border border-border bg-card px-4 py-2.5 shadow-lg">
               <LoaderCircle size={19} className="animate-spin text-primary" />
+
               <div>
                 <p className="text-xs font-semibold text-card-foreground">Loading Balance Sheet</p>
                 <p className="text-[11px] text-muted-foreground">Preparing report data...</p>
@@ -205,8 +327,6 @@ const BalanceSheet = () => {
         </AnimatePresence>
       </div>
 
-      
-
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border bg-success/[0.03] px-3 py-2">
@@ -250,7 +370,7 @@ const BalanceSheet = () => {
           </div>
         </div>
       </div>
- 
+
       <div className={`flex items-center justify-between rounded-lg border bg-card px-3 py-2.5 shadow-sm ${Math.abs(difference) < 0.01 ? "border-success/20" : "border-danger/20"}`}>
         <div className="flex items-center gap-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${Math.abs(difference) < 0.01 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>

@@ -20,6 +20,25 @@ export const getProfitLossFilterOptions = createAsyncThunk(
     }
 );
 
+// ⭐ UPDATED - BALANCE SHEET FILTER OPTIONS
+export const getBalanceSheetFilterOptions = createAsyncThunk(
+    "profitLoss/getBalanceSheetFilterOptions",
+    async (payload: any = {}, { rejectWithValue }) => {
+        try {
+            const res = await professionalAxios.get(
+                "/eTaxSolnMongoApiBackend/users/bookEZ/reports/balanceSheet/filterOptions",
+                { params: payload }
+            );
+
+            return res.data ?? null;
+        } catch (err: any) {
+            return rejectWithValue({
+                message: err?.response?.data?.message || "Failed to fetch Balance Sheet filter options"
+            });
+        }
+    }
+);
+
 // PROFIT LOSS ANALYSIS
 export const getProfitLossAnalysis = createAsyncThunk(
     "profitLoss/getProfitLossAnalysis",
@@ -73,13 +92,22 @@ const profitLossSlice = createSlice({
         analysis: null,
         balanceSheet: null,
 
+        // ⭐ UPDATED
+        balanceSheetFilterOptions: null,
+
         filterOptionsLoading: false,
         analysisLoading: false,
         balanceSheetLoading: false,
 
+        // ⭐ UPDATED
+        balanceSheetFilterOptionsLoading: false,
+
         filterOptionsError: null,
         analysisError: null,
-        balanceSheetError: null
+        balanceSheetError: null,
+
+        // ⭐ UPDATED
+        balanceSheetFilterOptionsError: null
     },
 
     reducers: {
@@ -88,13 +116,22 @@ const profitLossSlice = createSlice({
             state.analysis = null;
             state.balanceSheet = null;
 
+            // ⭐ UPDATED
+            state.balanceSheetFilterOptions = null;
+
             state.filterOptionsLoading = false;
             state.analysisLoading = false;
             state.balanceSheetLoading = false;
 
+            // ⭐ UPDATED
+            state.balanceSheetFilterOptionsLoading = false;
+
             state.filterOptionsError = null;
             state.analysisError = null;
             state.balanceSheetError = null;
+
+            // ⭐ UPDATED
+            state.balanceSheetFilterOptionsError = null;
         },
 
         clearProfitLossAnalysis: (state) => {
@@ -105,6 +142,13 @@ const profitLossSlice = createSlice({
         clearBalanceSheetAnalysis: (state) => {
             state.balanceSheet = null;
             state.balanceSheetError = null;
+        },
+
+        // ⭐ UPDATED
+        clearBalanceSheetFilterOptions: (state) => {
+            state.balanceSheetFilterOptions = null;
+            state.balanceSheetFilterOptionsLoading = false;
+            state.balanceSheetFilterOptionsError = null;
         }
     },
 
@@ -123,6 +167,22 @@ const profitLossSlice = createSlice({
                 state.filterOptionsLoading = false;
                 state.filterOptionsError = action.payload?.message;
                 state.filterOptions = null;
+            });
+
+        // ⭐ UPDATED - BALANCE SHEET FILTER OPTIONS
+        builder
+            .addCase(getBalanceSheetFilterOptions.pending, (state: any) => {
+                state.balanceSheetFilterOptionsLoading = true;
+                state.balanceSheetFilterOptionsError = null;
+            })
+            .addCase(getBalanceSheetFilterOptions.fulfilled, (state: any, action: any) => {
+                state.balanceSheetFilterOptionsLoading = false;
+                state.balanceSheetFilterOptions = action.payload ?? null;
+            })
+            .addCase(getBalanceSheetFilterOptions.rejected, (state: any, action: any) => {
+                state.balanceSheetFilterOptionsLoading = false;
+                state.balanceSheetFilterOptionsError = action.payload?.message;
+                state.balanceSheetFilterOptions = null;
             });
 
         // PROFIT LOSS ANALYSIS
@@ -166,7 +226,9 @@ const profitLossSlice = createSlice({
 export const {
     clearProfitLossState,
     clearProfitLossAnalysis,
-    clearBalanceSheetAnalysis
+    clearBalanceSheetAnalysis,
+    // ⭐ UPDATED
+    clearBalanceSheetFilterOptions
 } = profitLossSlice.actions;
 
 export default profitLossSlice.reducer;

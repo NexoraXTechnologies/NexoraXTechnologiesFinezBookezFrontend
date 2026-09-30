@@ -239,73 +239,114 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
     //     }
     // };
 
+    // ⭐ UPDATED
+    const formatPdfAmount = (value: any) => Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
     const handleLocalPdfPrint = async (forcedGstType?: string) => {
-        // ⭐ UPDATED
         const normalizedEntryType = String(entryType || "").toLowerCase();
-        const isReceiptPayment = ["receipt", "payment"].includes(normalizedEntryType);
-
-        // ⭐ UPDATED - receipt/payment should not get blocked by GST selection
+        const isReceipt = normalizedEntryType === "receipt";
+        const isPayment = normalizedEntryType === "payment";
+        const isReceiptPayment = isReceipt || isPayment;
         const finalGstType = forcedGstType || gstType || (isReceiptPayment ? "Without GST" : "");
-
         if (!isReceiptPayment && !finalGstType) return toast.warn("Select With GST Or Without GST");
         if (!Object.keys(company || {})?.length) return toast.error("Add Company Details");
-
         try {
+            setLoader(true);
             const includeGst = finalGstType === "With GST";
-
-            // ⭐ UPDATED - RECEIPT / PAYMENT KEEP FRONTEND HTML PDF
-            if (isReceiptPayment) {
-                const htmlContent = buildPdfHtml({
-                    ...company,
-                    selectedAccount,
-                    rowData,
-                    includeGst,
-                    primaryColor: "#1E88E5",
-                    entryType,
-                    gstType: finalGstType,
-                });
-
-                printHtmlUsingIframe(htmlContent);
-
+            const normalized: any = normalizeDoc(rowData);
+            const footer = normalized?.footer || {};
+            const voucherNumber = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || rowData?.recVoucherNumber || rowData?.payVoucherNumber || "";
+            if (!voucherNumber) {
+                toast.error("Voucher number not found");
+                return;
+            }
+            const formatVoucherDate = (value: any) => {
+                if (!value) return "";
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return String(value);
+                return `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`;
+            };
+            if (isReceipt) {
+                const pdfData = {
+                    isDefault: false,
+                    companyName: company?.companyName || company?.businessName || "",
+                    companyAddress: company?.companyAddress || company?.address || "",
+                    companyPhone: company?.companyPhone || company?.companyMobile || company?.mobileNumber || company?.mobile || "",
+                    companyEmail: company?.companyEmail || company?.email || "",
+                    paymentMode: rowData?.paymentMode || rowData?.recAccountName || "",
+                    customerAddress: selectedAccount?.accountAddress || "",
+                    voucherNo: rowData?.recVoucherNumber || voucherNumber,
+                    voucherDate: formatVoucherDate(rowData?.recVoucherDate || normalized?.docDate),
+                    items: (rowData?.recBody || []).map((item: any, index: number) => ({
+                        index: index + 1,
+                        name: item?.accountName || "",
+                        reference: (item?.references || [])
+                            .map((ref: any) => [ref?.referenceType, ref?.newReference || ref?.salesInvoice || ref?.purchaseInvoice || ref?.referenceNo].filter(Boolean).join(" : "))
+                            .filter(Boolean)
+                            .join(", "),
+                        amount: formatPdfAmount(item?.amount || item?.netAmount || 0),
+                    })),
+                    totalAmount: formatPdfAmount(rowData?.recFooter?.netAmount || footer?.netAmount || 0),
+                    theme: {
+                        primaryColor: selectedTemplate?.primaryColor || "#2b8ce5",
+                    },
+                };
+                await dispatch(downloadReportPdf({
+                    templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
+                    voucherNumber,
+                    pdfData,
+                })).unwrap();
                 setShow(false);
                 setGstType("");
                 setSelectedTemplate(null);
                 setSelectedExternal(false);
-
                 return;
             }
 
-            // ⭐ UPDATED - OTHER VOUCHERS USE BACKEND PDF
-            setLoader(true);
-
-            const normalized: any = normalizeDoc(rowData);
-            const footer = normalized?.footer || {};
-            const invoiceNo = normalized?.docNo || rowData?.voucherNumber || rowData?.sInvVoucherNumber || rowData?.sQuoteVoucherNumber || "";
-
-            if (!invoiceNo) {
-                toast.error("Voucher number not found");
+            if (isPayment) {
+                const pdfData = {
+                    isDefault: false,
+                    companyName: company?.companyName || company?.businessName || "",
+                    companyAddress: company?.companyAddress || company?.address || "",
+                    companyPhone: company?.companyPhone || company?.companyMobile || company?.mobileNumber || company?.mobile || "",
+                    companyEmail: company?.companyEmail || company?.email || "",
+                    paymentMode: rowData?.paymentMode || rowData?.payAccountName || "",
+                    customerAddress: selectedAccount?.accountAddress || "",
+                    voucherNo: rowData?.payVoucherNumber || voucherNumber,
+                    voucherDate: formatVoucherDate(rowData?.payVoucherDate || normalized?.docDate),
+                    items: (rowData?.payBody || []).map((item: any, index: number) => ({
+                        index: index + 1,
+                        name: item?.accountName || "",
+                        reference: (item?.references || [])
+                            .map((ref: any) => [ref?.referenceType, ref?.newReference || ref?.purchaseInvoice || ref?.salesInvoice || ref?.referenceNo].filter(Boolean).join(" : "))
+                            .filter(Boolean)
+                            .join(", "),
+                        amount: formatPdfAmount(item?.amount || item?.netAmount || 0),
+                    })),
+                    totalAmount: formatPdfAmount(rowData?.payFooter?.netAmount || footer?.netAmount || 0),
+                    theme: {
+                        primaryColor: selectedTemplate?.primaryColor || "#2b8ce5",
+                    },
+                };
+                await dispatch(downloadReportPdf({
+                    templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
+                    voucherNumber,
+                    pdfData,
+                })).unwrap();
+                setShow(false);
+                setGstType("");
+                setSelectedTemplate(null);
+                setSelectedExternal(false);
                 return;
             }
-
-            const {
-                items,
-                totalQty,
-                subTotal,
-                discountAmt,
-                cgstAmt,
-                sgstAmt,
-                igstAmt,
-                pdfGrandTotal,
-                amountWords,
-            } = buildPdfCalculations({
+            const { items, totalQty, subTotal, discountAmt, cgstAmt, sgstAmt, igstAmt, pdfGrandTotal, amountWords } = buildPdfCalculations({
                 itemsRaw: normalized?.body || [],
                 footer,
                 unitMap: {},
             });
-
             const pdfData = {
                 documentTitle: String(entryType || "voucher").replace(/-/g, " ").toUpperCase(),
-                voucherNumber: invoiceNo,
+                voucherNumber,
                 voucherDate: normalized?.docDate || "",
                 companyName: company?.companyName || company?.businessName || "",
                 companyAddress: company?.companyAddress || company?.address || "",
@@ -316,11 +357,11 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                 showGst: includeGst,
                 items: (items || []).map((item: any, index: number) => ({
                     index: index + 1,
-                    itemName: item?.productName || item?.itemName || "",
+                    itemName: item?.productName || item?.itemName || item?.accountName || "",
                     hsn: item?.productHSNCode || item?.hsnCode || item?.hsn || "",
                     unit: item?.uomLabel || item?.uom || item?.unit || "",
                     quantity: Number(item?.qty ?? item?.quantity ?? 0),
-                    rate: Number(item?.rate || 0),
+                    rate: Number(item?.rate || item?.amount || 0),
                     hasGst: includeGst && (
                         Number(item?.cgstPercentage ?? item?.cgst ?? 0) > 0 ||
                         Number(item?.sgstPercentage ?? item?.sgst ?? 0) > 0 ||
@@ -336,28 +377,20 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
                             Number(item?.igstAmount || 0)
                         ))
                         : 0,
-                    amount: Number(includeGst ? item?.net : item?.taxable) || 0,
+                    amount: Number(includeGst ? item?.net : item?.taxable) || Number(item?.netAmount || item?.amount || 0),
                 })),
                 totalQuantity: Number(totalQty || 0),
-                grossAmount: Number(subTotal || 0),
+                grossAmount: Number(subTotal || footer?.netAmount || 0),
                 discountAmount: Number(discountAmt || 0),
                 cgstAmount: includeGst ? Number(cgstAmt || 0) : 0,
                 sgstAmount: includeGst ? Number(sgstAmt || 0) : 0,
                 igstAmount: includeGst ? Number(igstAmt || 0) : 0,
-                netAmount: Number(pdfGrandTotal || 0),
+                netAmount: Number(pdfGrandTotal || footer?.netAmount || 0),
                 amountInWords: amountWords || "",
             };
-
-            console.log("PDF API Payload:", {
-                templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
-                voucherNumber: invoiceNo,
-                pdfData,
-            });
-
-            // ⭐ UPDATED - BACKEND PDF
             await dispatch(downloadReportPdf({
                 templateCode: selectedTemplate?.templateCode || REPORT_TEMPLATE_CODES.DEFAULT_VOUCHER,
-                voucherNumber: invoiceNo,
+                voucherNumber,
                 pdfData,
             })).unwrap();
 
@@ -369,7 +402,6 @@ const ListingModel = ({ show, setShow, title = "No Data Found", report, rowData,
             console.error("PDF download failed:", error);
             toast.error(error?.message || "PDF download failed");
         } finally {
-            // ⭐ UPDATED
             setLoader(false);
         }
     };

@@ -172,6 +172,10 @@ export const getEmptySystemConfiguration = () => ({
             profitLoss: {
                 customMasters: [],
             },
+            // ⭐ UPDATED
+            balanceSheet: {
+                customMasters: [],
+            },
         },
     },
 
@@ -339,6 +343,12 @@ export const normalizeSystemConfiguration = (raw: any) => ({
             profitLoss: {
                 customMasters: toBool(raw?.financeConfiguration?.isActive) && Array.isArray(raw?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                     ? raw.financeConfiguration.reportFilters.profitLoss.customMasters.map((item: any) => String(item || "").trim()).filter(Boolean)
+                    : [],
+            },
+            // ⭐ UPDATED
+            balanceSheet: {
+                customMasters: toBool(raw?.financeConfiguration?.isActive) && Array.isArray(raw?.financeConfiguration?.reportFilters?.balanceSheet?.customMasters)
+                    ? raw.financeConfiguration.reportFilters.balanceSheet.customMasters.map((item: any) => String(item || "").trim()).filter(Boolean)
                     : [],
             },
         },
@@ -1380,6 +1390,14 @@ const buildConfigurationPayload = (
                 profitLoss: {
                     customMasters: configuration?.financeConfiguration?.isActive && Array.isArray(configuration?.financeConfiguration?.reportFilters?.profitLoss?.customMasters)
                         ? configuration.financeConfiguration.reportFilters.profitLoss.customMasters
+                            .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
+                            .filter(Boolean)
+                        : [],
+                },
+                // ⭐ UPDATED
+                balanceSheet: {
+                    customMasters: configuration?.financeConfiguration?.isActive && Array.isArray(configuration?.financeConfiguration?.reportFilters?.balanceSheet?.customMasters)
+                        ? configuration.financeConfiguration.reportFilters.balanceSheet.customMasters
                             .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
                             .filter(Boolean)
                         : [],
@@ -3031,6 +3049,11 @@ const systemConfigurationSlice =
                                 ...state.configuration.financeConfiguration?.reportFilters?.profitLoss,
                                 customMasters: [],
                             },
+                            // ⭐ UPDATED
+                            balanceSheet: {
+                                ...state.configuration.financeConfiguration?.reportFilters?.balanceSheet,
+                                customMasters: [],
+                            },
                         };
                     }
                 },
@@ -3051,6 +3074,29 @@ const systemConfigurationSlice =
                             ...state.configuration.financeConfiguration?.reportFilters,
                             profitLoss: {
                                 ...state.configuration.financeConfiguration?.reportFilters?.profitLoss,
+                                customMasters,
+                            },
+                        },
+                    };
+                },
+
+            // ⭐ UPDATED
+            updateFinanceBalanceSheetCustomMastersLocal:
+                (
+                    state,
+                    action: any
+                ) => {
+                    const selected = Array.isArray(action.payload) ? action.payload : [];
+                    const customMasters = selected
+                        .map((item: any) => String(item?.value ?? item?.moduleCode ?? item?.customMasterCode ?? item ?? "").trim())
+                        .filter(Boolean);
+
+                    state.configuration.financeConfiguration = {
+                        ...state.configuration.financeConfiguration,
+                        reportFilters: {
+                            ...state.configuration.financeConfiguration?.reportFilters,
+                            balanceSheet: {
+                                ...state.configuration.financeConfiguration?.reportFilters?.balanceSheet,
                                 customMasters,
                             },
                         },
@@ -3783,6 +3829,8 @@ export const {
     updateInventoryConfigurationLocalField,
     updateFinanceConfigurationLocalField,
     updateFinanceProfitLossCustomMastersLocal,
+    // ⭐ UPDATED
+    updateFinanceBalanceSheetCustomMastersLocal,
     updateSystemConfigurationNestedField,
     updateWhatsAppModuleLocalToggle,
     setWhatsAppModuleEnabledLocal,

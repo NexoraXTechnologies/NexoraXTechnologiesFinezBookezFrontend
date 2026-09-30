@@ -32,6 +32,8 @@ import {
     setWhatsAppModuleEnabledLocal,
     updateFinanceConfigurationLocalField,
     updateFinanceProfitLossCustomMastersLocal,
+    // ⭐ UPDATED
+    updateFinanceBalanceSheetCustomMastersLocal,
     updateInventoryConfigurationLocalField,
     updateSystemConfigurationNestedField,
     updateWhatsAppModuleLocalToggle,
@@ -1403,6 +1405,20 @@ const SystemConfiguration = () => {
                     .customMasters
                 : [];
 
+        // ⭐ UPDATED
+        const selectedBalanceSheetCustomMasters =
+            Array.isArray(
+                financeConfig
+                    ?.reportFilters
+                    ?.balanceSheet
+                    ?.customMasters
+            )
+                ? financeConfig
+                    .reportFilters
+                    .balanceSheet
+                    .customMasters
+                : [];
+
         return (
             <Panel
                 title="Finance Setup"
@@ -1432,55 +1448,108 @@ const SystemConfiguration = () => {
                 />
 
                 {financeConfig?.isActive ? (
-                    <div className="grid grid-cols-1 gap-3 border-b border-border px-5 py-4 last:border-b-0 lg:grid-cols-[1fr_360px] lg:items-center">
-                        <div>
-                            <h4 className="text-sm font-bold text-card-foreground">
-                                Profit & Loss Custom Masters
-                            </h4>
+                    <>
+                        <div className="grid grid-cols-1 gap-3 border-b border-border px-5 py-4 last:border-b-0 lg:grid-cols-[1fr_360px] lg:items-center">
+                            <div>
+                                <h4 className="text-sm font-bold text-card-foreground">
+                                    Profit & Loss Custom Masters
+                                </h4>
 
-                            <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
-                                Select Custom Masters to use as filters in the Profit & Loss report.
-                            </p>
+                                <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                                    Select Custom Masters to use as filters in the Profit & Loss report.
+                                </p>
+                            </div>
+
+                            <SelectInput
+                                name="profitLossCustomMasters"
+                                value={
+                                    selectedProfitLossCustomMasters
+                                }
+                                placeholder={
+                                    financeCustomMasterLoading
+                                        ? "Loading Custom Masters..."
+                                        : "Select Custom Masters"
+                                }
+                                options={
+                                    financeCustomMasterOptions ||
+                                    []
+                                }
+                                isMulti
+                                largeData
+                                batchSize={
+                                    100
+                                }
+                                disabled={
+                                    financeCustomMasterLoading
+                                }
+                                onChange={(
+                                    event: any
+                                ) => {
+                                    dispatch(
+                                        updateFinanceProfitLossCustomMastersLocal(
+                                            Array.isArray(
+                                                event?.target
+                                                    ?.value
+                                            )
+                                                ? event.target.value
+                                                : []
+                                        )
+                                    );
+                                }}
+                            />
                         </div>
 
-                        <SelectInput
-                            name="profitLossCustomMasters"
-                            value={
-                                selectedProfitLossCustomMasters
-                            }
-                            placeholder={
-                                financeCustomMasterLoading
-                                    ? "Loading Custom Masters..."
-                                    : "Select Custom Masters"
-                            }
-                            options={
-                                financeCustomMasterOptions ||
-                                []
-                            }
-                            isMulti
-                            largeData
-                            batchSize={
-                                100
-                            }
-                            disabled={
-                                financeCustomMasterLoading
-                            }
-                            onChange={(
-                                event: any
-                            ) => {
-                                dispatch(
-                                    updateFinanceProfitLossCustomMastersLocal(
-                                        Array.isArray(
-                                            event?.target
-                                                ?.value
+                        {/* ⭐ UPDATED */}
+                        <div className="grid grid-cols-1 gap-3 border-b border-border px-5 py-4 last:border-b-0 lg:grid-cols-[1fr_360px] lg:items-center">
+                            <div>
+                                <h4 className="text-sm font-bold text-card-foreground">
+                                    Balance Sheet Custom Masters
+                                </h4>
+
+                                <p className="mt-1 text-xs font-medium leading-5 text-muted-foreground">
+                                    Select Custom Masters to use as filters in the Balance Sheet report.
+                                </p>
+                            </div>
+
+                            <SelectInput
+                                name="balanceSheetCustomMasters"
+                                value={
+                                    selectedBalanceSheetCustomMasters
+                                }
+                                placeholder={
+                                    financeCustomMasterLoading
+                                        ? "Loading Custom Masters..."
+                                        : "Select Custom Masters"
+                                }
+                                options={
+                                    financeCustomMasterOptions ||
+                                    []
+                                }
+                                isMulti
+                                largeData
+                                batchSize={
+                                    100
+                                }
+                                disabled={
+                                    financeCustomMasterLoading
+                                }
+                                onChange={(
+                                    event: any
+                                ) => {
+                                    dispatch(
+                                        updateFinanceBalanceSheetCustomMastersLocal(
+                                            Array.isArray(
+                                                event?.target
+                                                    ?.value
+                                            )
+                                                ? event.target.value
+                                                : []
                                         )
-                                            ? event.target.value
-                                            : []
-                                    )
-                                );
-                            }}
-                        />
-                    </div>
+                                    );
+                                }}
+                            />
+                        </div>
+                    </>
                 ) : null}
             </Panel>
         );
@@ -2083,12 +2152,7 @@ const SystemConfiguration = () => {
                             </p>
                         </div>
 
-                        <div
-                            className={`rounded-md border p-4 transition ${whereToAddConfirmed
-                                ? "border-primary/40 bg-primary/5"
-                                : "border-border bg-card"
-                                }`}
-                        >
+                        <div className={`rounded-md border p-4 transition ${whereToAddConfirmed ? "border-primary/40 bg-primary/5" : "border-border bg-card"}`}>
                             <Checkbox
                                 checked={whereToAddConfirmed}
                                 onChange={setWhereToAddConfirmed}
