@@ -1,19 +1,7 @@
-import {
-    ChevronFirst,
-    ChevronLast,
-    ChevronLeft,
-    ChevronRight,
-} from "lucide-react";
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import { PaginationButton } from "./buttons";
 
-const Pagination = ({
-    localLimit,
-    selectCb,
-    preDisabled,
-    nextDisabled,
-    setLocalOffset,
-    pagination,
-}: any) => {
+const Pagination = ({ localLimit, selectCb, preDisabled, nextDisabled, setLocalOffset, pagination }: any) => {
     const currentPage = Number(pagination?.currentPage || 1);
     const totalPages = Number(pagination?.totalPages || 1);
     const totalDocs = Number(pagination?.totalDocs || 0);
@@ -28,13 +16,7 @@ const Pagination = ({
     return (
         <div
             id="account-pagination"
-            className="
-                my-3 w-full
-                flex flex-col gap-3
-                sm:flex-row sm:items-center sm:justify-between
-                text-sm text-muted-foreground
-            "
-        >
+            className=" my-3 w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground"        >
             {/* Rows per page */}
             <div className="flex items-center gap-3 w-full sm:w-auto">
                 <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
@@ -52,8 +34,7 @@ const Pagination = ({
                         shadow-sm outline-none
                         transition-all duration-200
                         hover:border-primary
-                        focus:ring-4 focus:ring-primary/10 focus:border-primary
-                    "
+                        focus:ring-4 focus:ring-primary/10 focus:border-primary"
                 >
                     {[10, 20, 50,100].map((v) => (
                         <option key={v} value={v}>
