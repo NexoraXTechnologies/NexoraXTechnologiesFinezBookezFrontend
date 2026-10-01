@@ -55,7 +55,7 @@ const Pagination = ({
                         focus:ring-4 focus:ring-primary/10 focus:border-primary
                     "
                 >
-                    {[10, 20, 50, 100].map((v) => (
+                    {[10, 20, 50,100].map((v) => (
                         <option key={v} value={v}>
                             {v}
                         </option>

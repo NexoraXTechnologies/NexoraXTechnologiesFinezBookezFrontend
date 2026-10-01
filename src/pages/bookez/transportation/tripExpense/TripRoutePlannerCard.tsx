@@ -334,7 +334,7 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
                         <div className="min-w-0">
                             <div className="mb-1 flex flex-wrap items-center gap-2">
 
-                              
+
 
                                 <RouteBadge badge="Fastest" />
 
@@ -397,27 +397,28 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
             </div>
 
             {sheetVisible && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45  backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-sm sm:p-4">
                     <button
                         type="button"
                         className="absolute inset-0"
                         onClick={() => setSheetVisible(false)}
                     />
 
-                    <div className="relative z-10 flex  w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-card ">
+                    {/* ★ RESPONSIVE: viewport-safe modal */}
+                    <div className="relative z-10 flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-card sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl">
                         {/* Header */}
-                        <div className="flex shrink-0 items-center justify-between border-b border-border bg-card p-3">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card p-2.5 sm:p-3">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-primary/20 bg-primary/10 text-primary sm:h-11 sm:w-11 sm:rounded-xl">
                                     <Map size={20} />
                                 </span>
 
-                                <div className="min-w-0">
-                                    <h3 className="truncate text-lg font-bold text-card-foreground">
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="truncate text-base font-bold text-card-foreground sm:text-lg">
                                         Best Route Planner
                                     </h3>
 
-                                    <p className="truncate text-sm font-medium text-muted-foreground">
+                                    <p className="truncate text-xs font-medium text-muted-foreground sm:text-sm">
                                         Compare fastest, delayed, and alternative route options.
                                     </p>
                                 </div>
@@ -433,11 +434,12 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
                         </div>
 
                         {/* Body */}
-                        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_0.8fr]">
+                        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+                            <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-[1.45fr_0.8fr]">
                                 {/* Left side */}
-                                <div className="flex min-w-0 flex-col gap-4">
-                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
+                                    {/* ★ RESPONSIVE: address cards */}
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                                         <AddressBox
                                             title="Pickup"
                                             value={endpoints.origin.address || endpoints.origin.label}
@@ -452,23 +454,28 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
                                         />
                                     </div>
 
-                                    <div className="overflow-hidden rounded-xl border border-border bg-muted/40">
-                                        <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                                            <div>
-                                                <p className="text-sm font-bold text-card-foreground">
+                                    {/* Route Preview */}
+                                    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-muted/40">
+                                        <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-bold text-card-foreground">
                                                     Route Preview
                                                 </p>
-                                                <p className="text-xs font-medium text-muted-foreground">
+
+                                                <p className="truncate text-[11px] font-medium text-muted-foreground sm:text-xs">
                                                     Selected route is highlighted on the map
                                                 </p>
                                             </div>
 
                                             {selectedCard?.badge && (
-                                                <RouteBadge badge={selectedCard.badge} />
+                                                <div className="shrink-0">
+                                                    <RouteBadge badge={selectedCard.badge} />
+                                                </div>
                                             )}
                                         </div>
 
-                                        <div className="h-[300px] md:h-[360px]">
+                                        {/* ★ RESPONSIVE: map height */}
+                                        <div className="h-[220px] xs:h-[240px] sm:h-[280px] md:h-[320px] xl:h-[360px]">
                                             <iframe
                                                 title="Route Preview"
                                                 srcDoc={mapHtml}
@@ -479,60 +486,66 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
                                 </div>
 
                                 {/* Right side */}
-                                <div className="flex  flex-col gap-2">
-                                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-2">
-                                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                <div className="flex min-w-0 flex-col gap-2">
+                                    {/* Selected Route */}
+                                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-2 sm:p-3">
+                                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground sm:text-xs">
                                             Selected Route
                                         </p>
 
-                                        <h4 className="text-base font-bold text-card-foreground">
+                                        <h4 className="truncate text-sm font-bold text-card-foreground sm:text-base">
                                             {selectedCard?.label || "Route Option"}
                                         </h4>
 
-                                        <div className=" flex items-end justify-between gap-3">
-
-                                            <p className="text-md font-bold leading-none text-primary">
-                                                {selectedCard?.distanceKm || compactDistance || "--"}
+                                        {/* ★ RESPONSIVE: prevents distance/duration/badge overflow */}
+                                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 sm:justify-between">
+                                            <p className="shrink-0 text-sm font-bold leading-none text-primary sm:text-base">
+                                                {selectedCard?.distanceKm ||
+                                                    compactDistance ||
+                                                    "--"}
                                             </p>
 
-                                            <p className=" text-sm font-bold text-card-foreground">
+                                            <p className="shrink-0 text-xs font-bold text-card-foreground sm:text-sm">
                                                 {selectedCard?.durationText || compactDuration || "--"}
                                             </p>
 
-
                                             {selectedCard?.badge && (
-                                                <RouteBadge badge={selectedCard.badge} />
+                                                <div className="shrink-0">
+                                                    <RouteBadge badge={selectedCard.badge} />
+                                                </div>
                                             )}
                                         </div>
 
-                                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                                        <p className="mt-2 break-words text-xs font-medium leading-relaxed text-muted-foreground">
                                             {selectedCard?.via ||
                                                 "Best route based on available route data."}
                                         </p>
                                     </div>
 
-                                    <div className="rounded-xl border border-border bg-card p-2">
-                                        <div className="mb-2 flex items-center justify-between">
+                                    {/* Route Options */}
+                                    <div className="min-w-0 rounded-xl border border-border bg-card p-2 sm:p-3">
+                                        <div className="mb-2 flex items-center justify-between gap-2">
                                             <p className="text-sm font-bold text-card-foreground">
                                                 Route Options
                                             </p>
 
-                                            <p className="text-xs font-bold text-muted-foreground">
+                                            <p className="shrink-0 text-xs font-bold text-muted-foreground">
                                                 {routeCards?.length || 0} routes
                                             </p>
                                         </div>
 
                                         {loading ? (
-                                            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-4 text-sm font-bold text-muted-foreground">
-                                                <Loader2 className="animate-spin" size={16} />
+                                            <div className="flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 p-3 text-center text-xs font-bold text-muted-foreground sm:p-4 sm:text-sm">
+                                                <Loader2 className="shrink-0 animate-spin" size={16} />
                                                 Finding routes...
                                             </div>
                                         ) : routeCards.length === 0 ? (
-                                            <div className="rounded-lg border border-border bg-muted/30 p-4 text-center text-sm font-bold text-muted-foreground">
+                                            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center text-xs font-bold text-muted-foreground sm:p-4 sm:text-sm">
                                                 {errorText || "Route options unavailable"}
                                             </div>
                                         ) : (
-                                            <div className="flex max-h-[320px] flex-col gap-2 overflow-y-auto pr-1">
+                                            /* ★ RESPONSIVE: route list height */
+                                            <div className="flex max-h-[220px] flex-col gap-2 overflow-y-auto pr-1 sm:max-h-[260px] md:max-h-[280px] xl:max-h-[320px]">
                                                 {routeCards.map((item: any, index: number) => (
                                                     <RouteOptionCard
                                                         key={item?.id || index}
@@ -545,13 +558,17 @@ export default function TripRoutePlannerCard({ routesData, className = "" }: any
                                         )}
                                     </div>
 
+                                    {/* Google Maps */}
                                     <button
                                         type="button"
                                         onClick={() => handleOpenMaps(selectedIndex)}
-                                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground transition hover:bg-primary/90"
+                                        className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 sm:px-5"
                                     >
-                                        <ExternalLink size={16} />
-                                        Open in Google Maps
+                                        <ExternalLink
+                                            className="shrink-0"
+                                            size={16}
+                                        />
+                                        <span>Open in Google Maps</span>
                                     </button>
                                 </div>
                             </div>

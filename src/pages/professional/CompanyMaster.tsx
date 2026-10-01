@@ -7,7 +7,7 @@ import {
   verifyIFSC,
 } from "../../redux/slices/professionalSlice/professionalCompanyMaster.slice";
 import { toast } from "react-toastify";
-import { Edit, RefreshCcw, CheckCircle2 } from "lucide-react";
+import { Edit, RefreshCcw, CheckCircle2, EyeOff, Eye } from "lucide-react";
 import { ImageUploadInput, SelectInput, TextArea, TextInput, ToggleInput } from "../../components/inputs"; // ⭐ UPDATED
 import Modal from "../../components/modal";
 import {
@@ -172,6 +172,8 @@ const CompanyMaster = () => {
   const dynamicCompanySchemaFields = loadedCompanySchemaFields.length ? loadedCompanySchemaFields : rawDynamicCompanySchemaFields;
   const [pendingCity, setPendingCity] = useState("");
   const [verifiedIfscCode, setVerifiedIfscCode] = useState("");
+  // ⭐ ADDED — E-WAY BILL PASSWORD VISIBILITY
+  const [showEwbPassword, setShowEwbPassword] = useState(false);
   const [confirmTooltip, setConfirmTooltip] = useState<any>({
     show: false,
     x: null,
@@ -794,7 +796,7 @@ const CompanyMaster = () => {
           setShow: setShowModal,
           handleSubmit,
           state: editingCompany,
-          title: "Add New Company",
+          title: editingCompany ? "Company" : "Add New Company",
           gridCols: 3,
           maxWidth: "4xl",
           bodyClassName: "p-5 gap-3 bg-card text-card-foreground",
@@ -872,15 +874,32 @@ const CompanyMaster = () => {
                     error={errors.username}
                     type="text"
                   />
-                  <TextInput
-                    label="E-Way Bill Password"
-                    mandatory={true}
-                    value={form.ewbpwd}
-                    onChange={(e: any) => updateField("ewbpwd", e.target.value)}
-                    placeholder="Enter E-Way Bill password"
-                    error={errors.ewbpwd}
-                    type="password"
-                  />
+                  {/* ⭐ UPDATED — E-WAY BILL PASSWORD WITH SHOW/HIDE */}
+                  <div className="relative [&_input]:pr-10">
+                    <TextInput
+                      label="E-Way Bill Password"
+                      mandatory={true}
+                      value={form.ewbpwd}
+                      onChange={(e: any) => updateField("ewbpwd", e.target.value)}
+                      placeholder="Enter E-Way Bill password"
+                      error={errors.ewbpwd}
+                      type={showEwbPassword ? "text" : "password"}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowEwbPassword((prev) => !prev)}
+                      className="absolute right-2 top-[28px] flex h-[24px] w-[30px] items-center justify-center rounded-md text-muted-foreground transition  hover:text-card-foreground"
+                      title={showEwbPassword ? "Hide password" : "Show password"}
+                      aria-label={showEwbPassword ? "Hide password" : "Show password"}
+                    >
+                      {showEwbPassword ? (
+                        <EyeOff size={17} />
+                      ) : (
+                        <Eye size={17} />
+                      )}
+                    </button>
+                  </div>
                 </>
               )}
               {/* IFSC */}
