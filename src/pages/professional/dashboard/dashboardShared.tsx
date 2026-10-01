@@ -1,4 +1,4 @@
-import React from "react";
+
 export const EmptyData = ({ text = "No data available" }: { text?: string }) => {
     return (
         <div className="rounded-md bg-muted p-4 text-center text-xs font-bold text-muted-foreground">

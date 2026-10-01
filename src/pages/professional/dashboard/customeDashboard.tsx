@@ -1063,8 +1063,8 @@ const CustomDashboardView = () => {
                     action
                 )
             ) {
-                // @ts-ignore
                 setLocalError(
+                    // @ts-ignore
                     action?.payload?.message ||
                     "Preview failed."
                 );
