@@ -24,17 +24,14 @@ import {
 	Landmark,
 	ReceiptText,
 	ShoppingCart,
-	Wallet,
+	Wallet
 } from "lucide-react";
-
 import {
 	fetchProfessionalDashboardAnalytics,
-	fetchTransportDashboardAnalytics,
+	fetchTransportDashboardAnalytics
 } from "../../redux/slices/professionalSlice/dashboard/professionalDashboardSlice";
-
 import AiTaxCopilotDrawer from "./AiChat/AiTaxCopilotDrawer";
 import AiChatBox from "./AiChat/AiChatBox";
-
 import { formatMoney } from "../../utils/helperFunctions";
 import {
 	CHART_COLORS,
@@ -43,16 +40,20 @@ import {
 	CompactTooltip,
 	CompactWidgetCard,
 } from "../../components/dashboardComp";
-
+import CustomDashboardView from "./customeDashboard";
+export const EmptyData = ({ text = "No data available" }: { text?: string }) => {
+	return (
+		<div className="rounded-md bg-muted p-4 text-center text-xs font-bold text-muted-foreground">
+			{text}
+		</div>
+	);
+};
 type TabType = "taxez" | "bookez";
-
 const formatNumber = (value: any) => {
 	const num = Number(value || 0);
 	return new Intl.NumberFormat("en-IN").format(num);
 };
-
 const toNumber = (value: any) => Number(value || 0);
-
 const safeJsonParse = (value: any) => {
 	try {
 		if (!value) return null;
@@ -62,41 +63,29 @@ const safeJsonParse = (value: any) => {
 		return null;
 	}
 };
-
 const getSavedPermissions = () => {
 	const keys = ["permissions", "permissionData", "bookezPermissions"];
-
 	for (const key of keys) {
 		const saved = localStorage.getItem(key);
 		const parsed = safeJsonParse(saved);
-
 		if (parsed) return parsed;
 	}
-
 	return {};
 };
-
 const hasAnyViewPermission = (obj: any): boolean => {
 	if (!obj || typeof obj !== "object") return false;
-
 	return Object.values(obj).some((value: any) => {
 		if (!value || typeof value !== "object") return false;
-
 		if (value?.view === true) return true;
-
 		return hasAnyViewPermission(value);
 	});
 };
-
 const findBookEzPermissionObject = (permissions: any): any => {
 	const parsed = safeJsonParse(permissions);
-
 	if (!parsed || typeof parsed !== "object") return null;
-
 	if (parsed?.enabled === true && parsed?.permissions) {
 		return parsed;
 	}
-
 	const possibleBookEz =
 		parsed?.bookez ||
 		parsed?.bookEz ||
@@ -106,24 +95,18 @@ const findBookEzPermissionObject = (permissions: any): any => {
 		parsed?.data?.bookEz ||
 		parsed?.permissions?.bookez ||
 		parsed?.permissions?.bookEz;
-
 	if (possibleBookEz) {
 		return safeJsonParse(possibleBookEz);
 	}
-
 	if (parsed?.data) {
 		const found = findBookEzPermissionObject(parsed.data);
 		if (found) return found;
 	}
-
 	return null;
 };
-
 const findTaxEzPermissionObject = (permissions: any): any => {
 	const parsed = safeJsonParse(permissions);
-
 	if (!parsed || typeof parsed !== "object") return null;
-
 	const possibleTaxEz =
 		parsed?.taxez ||
 		parsed?.taxEz ||
@@ -136,43 +119,32 @@ const findTaxEzPermissionObject = (permissions: any): any => {
 		parsed?.data?.taxEz ||
 		parsed?.permissions?.taxez ||
 		parsed?.permissions?.taxEz;
-
 	if (possibleTaxEz) {
 		return safeJsonParse(possibleTaxEz);
 	}
-
 	if (parsed?.data) {
 		const found = findTaxEzPermissionObject(parsed.data);
 		if (found) return found;
 	}
-
 	return null;
 };
-
 const isBookEzPermission = (permissions: any) => {
 	const bookez = findBookEzPermissionObject(permissions);
-
 	if (!bookez) return false;
 	if (bookez?.enabled !== true) return false;
-
 	return hasAnyViewPermission(bookez?.permissions);
 };
-
 const isTaxEzPermission = (permissions: any) => {
 	const taxez = findTaxEzPermissionObject(permissions);
-
 	if (!taxez) return false;
 	if (taxez === true) return true;
-
 	if (taxez?.enabled === true) {
 		if (!taxez?.permissions) return true;
 		return hasAnyViewPermission(taxez.permissions);
 	}
-
 	return hasAnyViewPermission(taxez?.permissions || taxez);
 };
-
-const pageAnimation: any = {
+export const pageAnimation: any = {
 	hidden: {
 		opacity: 0,
 		y: 14,
@@ -193,7 +165,6 @@ const pageAnimation: any = {
 		},
 	},
 };
-
 const compactContainerAnim: any = {
 	hidden: {},
 	visible: {
@@ -203,19 +174,9 @@ const compactContainerAnim: any = {
 	},
 };
 
-const EmptyData = ({ text = "No data available" }: { text?: string }) => {
-	return (
-		<div className="rounded-md bg-muted p-4 text-center text-xs font-bold text-muted-foreground">
-			{text}
-		</div>
-	);
-};
-
 const scrollableCardListClass = "max-h-[320px] space-y-2 overflow-y-auto pr-1";
-
 const ModuleAreaTooltip = ({ active, payload, label }: any) => {
 	if (!active || !payload?.length) return null;
-
 	return (
 		<div className="rounded-xl bg-card px-4 py-3 text-card-foreground shadow-xl ring-1 ring-border">
 			<p className="text-xs font-semibold text-muted-foreground">{label}</p>
@@ -225,188 +186,170 @@ const ModuleAreaTooltip = ({ active, payload, label }: any) => {
 		</div>
 	);
 };
-
 // const TaxEzDashboardView = ({ analytics }: { analytics: any }) => {
-// 	const cards = useMemo(() => {
-// 		return [
-// 			{
-// 				title: "Total Taxpayers",
-// 				value: analytics?.incomeTax?.totalTaxPayers ?? 0,
-// 				stats: {
-// 					active: analytics?.incomeTax?.active ?? 0,
-// 					inactive: analytics?.incomeTax?.inactive ?? 0,
-// 				},
-// 				color: "bg-primary/10",
-// 				delay: 0.05,
-// 				icon: "👤",
-// 			},
-// 			{
-// 				title: "ITR",
-// 				value:
-// 					(analytics?.itr?.filedSuccessfully ?? 0) +
-// 					(analytics?.itr?.draft ?? 0),
-// 				stats: {
-// 					filed: analytics?.itr?.filedSuccessfully ?? 0,
-// 					draft: analytics?.itr?.draft ?? 0,
-// 				},
-// 				color: "bg-primary/10",
-// 				delay: 0.1,
-// 				icon: "📄",
-// 			},
-// 			{
-// 				title: "Tasks",
-// 				value: analytics?.tasks?.total ?? 0,
-// 				stats: {
-// 					inProgress: analytics?.tasks?.inProgress ?? 0,
-// 					partial: analytics?.tasks?.partiallyCompleted ?? 0,
-// 					completed: analytics?.tasks?.completed ?? 0,
-// 				},
-// 				color: "bg-success/10",
-// 				delay: 0.15,
-// 				icon: "✅",
-// 			},
-// 			{
-// 				title: "Documents",
-// 				value: analytics?.documents?.total ?? 0,
-// 				stats: {
-// 					active: analytics?.documents?.active ?? 0,
-// 					deleted: analytics?.documents?.deleted ?? 0,
-// 				},
-// 				color: "bg-muted",
-// 				delay: 0.2,
-// 				icon: "📁",
-// 			},
-// 			{
-// 				title: "Employees",
-// 				value: analytics?.employees?.total ?? 0,
-// 				stats: {
-// 					active: analytics?.employees?.active ?? 0,
-// 					inactive: analytics?.employees?.inactive ?? 0,
-// 				},
-// 				color: "bg-primary/10",
-// 				delay: 0.25,
-// 				icon: "👥",
-// 			},
-// 			{
-// 				title: "Masters",
-// 				value:
-// 					(analytics?.accountMaster?.total ?? 0) +
-// 					(analytics?.productMaster?.total ?? 0),
-// 				stats: {
-// 					accounts: analytics?.accountMaster?.total ?? 0,
-// 					products: analytics?.productMaster?.total ?? 0,
-// 				},
-// 				color: "bg-muted",
-// 				delay: 0.3,
-// 				icon: "📦",
-// 			},
-// 		];
-// 	}, [analytics]);
-
-// 	const taskDonut = useMemo(() => {
-// 		const t = analytics?.tasks || {};
-
-// 		return [
-// 			{ name: "In Progress", value: t.inProgress ?? 0 },
-// 			{ name: "Partial", value: t.partiallyCompleted ?? 0 },
-// 			{ name: "Completed", value: t.completed ?? 0 },
-// 		];
-// 	}, [analytics]);
-
-// 	const itrDonut = useMemo(() => {
-// 		const i = analytics?.itr || {};
-
-// 		return [
-// 			{ name: "Filed", value: i.filedSuccessfully ?? 0 },
-// 			{ name: "Draft", value: i.draft ?? 0 },
-// 		];
-// 	}, [analytics]);
-
-// 	const taxpayerDonut = useMemo(() => {
-// 		const it = analytics?.incomeTax || {};
-
-// 		return [
-// 			{ name: "Active", value: it.active ?? 0 },
-// 			{ name: "Inactive", value: it.inactive ?? 0 },
-// 		];
-// 	}, [analytics]);
-
-// 	return (
-// 		<motion.div
-// 			key="taxez-dashboard"
-// 			variants={pageAnimation}
-// 			initial="hidden"
-// 			animate="visible"
-// 			exit="exit"
-// 		>
-// 			<div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-// 				<div>
-// 					<h1 className="text-2xl font-bold text-foreground">TaxEz Dashboard</h1>
-// 					<p className="mt-1 text-sm text-muted-foreground">
-// 						Filing overview, compliance status, and workload summary.
-// 					</p>
-// 				</div>
-
-// 				<ProQuickLinks
-// 					links={[
-// 						{
-// 							label: "Add Taxpayer",
-// 							to: "/professional/incometax/addtaxpayer",
-// 						},
-// 						{
-// 							label: "File ITR",
-// 							to: "/professional/incometax/fileitrlist",
-// 						},
-// 						{
-// 							label: "Add Team/Employee",
-// 							to: "/professional/users",
-// 						},
-// 					]}
-// 				/>
-// 			</div>
-
-// 			<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-// 				{cards.map((c) => (
-// 					<ProDashboardCart key={c.title} {...c} />
-// 				))}
-// 			</div>
-
-// 			<div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-// 				<ProStatDonutChart title="Tasks Status" items={taskDonut} />
-// 				<ProStatDonutChart title="ITR Status" items={itrDonut} />
-// 				<ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
-// 			</div>
-// 		</motion.div>
-// 	);
+//  const cards = useMemo(() => {
+//      return [
+//          {
+//              title: "Total Taxpayers",
+//              value: analytics?.incomeTax?.totalTaxPayers ?? 0,
+//              stats: {
+//                  active: analytics?.incomeTax?.active ?? 0,
+//                  inactive: analytics?.incomeTax?.inactive ?? 0,
+//              },
+//              color: "bg-primary/10",
+//              delay: 0.05,
+//              icon: "👤",
+//          },
+//          {
+//              title: "ITR",
+//              value:
+//                  (analytics?.itr?.filedSuccessfully ?? 0) +
+//                  (analytics?.itr?.draft ?? 0),
+//              stats: {
+//                  filed: analytics?.itr?.filedSuccessfully ?? 0,
+//                  draft: analytics?.itr?.draft ?? 0,
+//              },
+//              color: "bg-primary/10",
+//              delay: 0.1,
+//              icon: "📄",
+//          },
+//          {
+//              title: "Tasks",
+//              value: analytics?.tasks?.total ?? 0,
+//              stats: {
+//                  inProgress: analytics?.tasks?.inProgress ?? 0,
+//                  partial: analytics?.tasks?.partiallyCompleted ?? 0,
+//                  completed: analytics?.tasks?.completed ?? 0,
+//              },
+//              color: "bg-success/10",
+//              delay: 0.15,
+//              icon: "✅",
+//          },
+//          {
+//              title: "Documents",
+//              value: analytics?.documents?.total ?? 0,
+//              stats: {
+//                  active: analytics?.documents?.active ?? 0,
+//                  deleted: analytics?.documents?.deleted ?? 0,
+//              },
+//              color: "bg-muted",
+//              delay: 0.2,
+//              icon: "📁",
+//          },
+//          {
+//              title: "Employees",
+//              value: analytics?.employees?.total ?? 0,
+//              stats: {
+//                  active: analytics?.employees?.active ?? 0,
+//                  inactive: analytics?.employees?.inactive ?? 0,
+//              },
+//              color: "bg-primary/10",
+//              delay: 0.25,
+//              icon: "👥",
+//          },
+//          {
+//              title: "Masters",
+//              value:
+//                  (analytics?.accountMaster?.total ?? 0) +
+//                  (analytics?.productMaster?.total ?? 0),
+//              stats: {
+//                  accounts: analytics?.accountMaster?.total ?? 0,
+//                  products: analytics?.productMaster?.total ?? 0,
+//              },
+//              color: "bg-muted",
+//              delay: 0.3,
+//              icon: "📦",
+//          },
+//      ];
+//  }, [analytics]);
+//  const taskDonut = useMemo(() => {
+//      const t = analytics?.tasks || {};
+//      return [
+//          { name: "In Progress", value: t.inProgress ?? 0 },
+//          { name: "Partial", value: t.partiallyCompleted ?? 0 },
+//          { name: "Completed", value: t.completed ?? 0 },
+//      ];
+//  }, [analytics]);
+//  const itrDonut = useMemo(() => {
+//      const i = analytics?.itr || {};
+//      return [
+//          { name: "Filed", value: i.filedSuccessfully ?? 0 },
+//          { name: "Draft", value: i.draft ?? 0 },
+//      ];
+//  }, [analytics]);
+//  const taxpayerDonut = useMemo(() => {
+//      const it = analytics?.incomeTax || {};
+//      return [
+//          { name: "Active", value: it.active ?? 0 },
+//          { name: "Inactive", value: it.inactive ?? 0 },
+//      ];
+//  }, [analytics]);
+//  return (
+//      <motion.div
+//          key="taxez-dashboard"
+//          variants={pageAnimation}
+//          initial="hidden"
+//          animate="visible"
+//          exit="exit"
+//      >
+//          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+//              <div>
+//                  <h1 className="text-2xl font-bold text-foreground">TaxEz Dashboard</h1>
+//                  <p className="mt-1 text-sm text-muted-foreground">
+//                      Filing overview, compliance status, and workload summary.
+//                  </p>
+//              </div>
+//              <ProQuickLinks
+//                  links={[
+//                      {
+//                          label: "Add Taxpayer",
+//                          to: "/professional/incometax/addtaxpayer",
+//                      },
+//                      {
+//                          label: "File ITR",
+//                          to: "/professional/incometax/fileitrlist",
+//                      },
+//                      {
+//                          label: "Add Team/Employee",
+//                          to: "/professional/users",
+//                      },
+//                  ]}
+//              />
+//          </div>
+//          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+//              {cards.map((c) => (
+//                  <ProDashboardCart key={c.title} {...c} />
+//              ))}
+//          </div>
+//          <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+//              <ProStatDonutChart title="Tasks Status" items={taskDonut} />
+//              <ProStatDonutChart title="ITR Status" items={itrDonut} />
+//              <ProStatDonutChart title="Taxpayer Status" items={taxpayerDonut} />
+//          </div>
+//      </motion.div>
+//  );
 // };
-
 const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 	const dashboardData = analytics || {};
-
 	const sales = dashboardData?.sales || {};
 	const purchase = dashboardData?.purchase || {};
 	const finance = dashboardData?.finance || {};
 	const receivable = dashboardData?.receivable || {};
 	const payable = dashboardData?.payable || {};
 	const bookAnalytics = dashboardData?.analytics || {};
-
 	const salesInvoiceAmount = toNumber(sales?.totalInvoiceNetAmount);
 	const salesOrderAmount = toNumber(sales?.totalOrdersNetAmount);
 	const salesReturnAmount = toNumber(sales?.totalReturnsNetAmount);
-
 	const purchaseOrderAmount = toNumber(purchase?.totalOrdersNetAmount);
 	const purchaseInvoiceAmount = toNumber(purchase?.totalInvoiceNetAmount);
 	const purchaseReturnAmount = toNumber(purchase?.totalReturnsNetAmount);
 	const purchaseGrnAmount = toNumber(purchase?.totalGrnNetAmount);
-
 	const receivableAmount = toNumber(receivable?.totalReceivableAmount);
 	const payableAmount = toNumber(payable?.totalPayableAmount);
-
 	const topCustomers = bookAnalytics?.topCustomers || [];
 	const topVendors = bookAnalytics?.topVendors || [];
 	const topSellingProducts = bookAnalytics?.topSellingProducts || [];
 	const topPurchasingProducts = bookAnalytics?.topPurchasingProducts || [];
-
 	const salesPurchaseData = [
 		{
 			month: "Orders",
@@ -429,34 +372,29 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 			Purchase: purchaseGrnAmount,
 		},
 	].filter((item) => item.Sales > 0 || item.Purchase > 0);
-
 	const amountPieData = [
 		{ name: "Sales Invoice", value: salesInvoiceAmount },
 		{ name: "Sales Return", value: salesReturnAmount },
 		{ name: "Purchase Invoice", value: purchaseInvoiceAmount },
 		{ name: "Purchase Return", value: purchaseReturnAmount },
 	].filter((item) => item.value > 0);
-
 	const revenueTotal = salesInvoiceAmount;
 	// const revenueTotal = amountPieData.reduce((sum, item) => sum + Number(item.value || 0), 0);
 	// const revenueTotal = amountPieData.reduce(
-	// 	(sum, item) => sum + Number(item.value || 0),
-	// 	0
+	//  (sum, item) => sum + Number(item.value || 0),
+	//  0
 	// );
-
 	const revenueChartData = amountPieData.map((item, index) => {
 		const percent =
 			revenueTotal > 0
 				? Math.round((Number(item.value || 0) / revenueTotal) * 100)
 				: 0;
-
 		return {
 			...item,
 			percent,
 			color: CHART_COLORS[index % CHART_COLORS.length],
 		};
 	});
-
 	const transactionCountData = [
 		{
 			name: "Sales Orders",
@@ -495,27 +433,22 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 			value: toNumber(finance?.totalPayment),
 		},
 	].filter((item) => item.value > 0);
-
 	const totalTransactionCount = transactionCountData.reduce(
 		(sum: number, item: any) => sum + Number(item.value || 0),
 		0
 	);
-
 	const moduleAreaChartData = transactionCountData.map((item: any) => ({
 		name: item.name,
 		value: Number(item.value || 0),
 	}));
-
 	const highestModule = moduleAreaChartData.reduce(
 		(max: any, item: any) => {
 			return item.value > max.value ? item : max;
 		},
 		{ name: "-", value: 0 }
 	);
-
 	const outstandingTotal = receivableAmount + payableAmount;
 	const balanceScore = outstandingTotal > 0 ? Math.round((receivableAmount / outstandingTotal) * 100) : 0;
-
 	return (
 		<motion.div
 			key="bookez-dashboard"
@@ -540,7 +473,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					chartType="bar"
 					accent="sales"
 				/>
-
 				<CompactKpiCard
 					title="Sales Orders"
 					value={formatMoney(salesOrderAmount)}
@@ -549,7 +481,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					chartType="line"
 					accent="sales"
 				/>
-
 				<CompactKpiCard
 					title="Receivable"
 					value={formatMoney(receivableAmount)}
@@ -560,7 +491,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					chartType="donut"
 					accent="receivable"
 				/>
-
 				<CompactKpiCard
 					title="Payable"
 					value={formatMoney(payableAmount)}
@@ -570,7 +500,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					accent="payable"
 				/>
 			</motion.div>
-
 			{/* Main Chart Row */}
 			<motion.div
 				variants={compactContainerAnim}
@@ -585,8 +514,8 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					right={
 						<>
 							{/* <span className="rounded-md bg-card px-2 py-1 text-xs font-black text-primary">
-								API Data
-							</span> */}
+                                API Data
+                            </span> */}
 						</>
 					}
 				>
@@ -610,7 +539,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								</RadialBarChart>
 							</ResponsiveContainer>
 						</div>
-
 						<div className="-mt-20 text-center">
 							<h2 className="text-3xl font-black text-foreground">
 								{balanceScore}%
@@ -619,7 +547,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								Receivable Share
 							</p>
 						</div>
-
 						<div className="mt-12 border-t border-border pt-3 text-center">
 							<p className="text-sm font-black text-card-foreground">
 								Outstanding position
@@ -630,7 +557,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						</div>
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard
 					title="Sales vs Purchase"
 					className="xl:col-span-3"
@@ -683,7 +609,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					)}
 				</CompactWidgetCard>
 			</motion.div>
-
 			{/* Middle Row */}
 			<div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
 				<CompactWidgetCard
@@ -693,8 +618,8 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					right={
 						<>
 							{/* <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-							API Data
-						</span> */}
+                            API Data
+                        </span> */}
 						</>
 					}
 				>
@@ -706,24 +631,20 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 								<p className="text-xs font-bold text-muted-foreground">
 									Total module transactions
 								</p>
-
 								<div className="flex items-end justify-between gap-3">
 									<h2 className="text-4xl font-black tracking-tight text-foreground">
 										{formatNumber(totalTransactionCount)}
 									</h2>
-
 									<div className="text-right">
 										<p className="text-xs font-bold text-muted-foreground">
 											Top module
 										</p>
-
 										<p className="text-sm font-black text-primary">
 											{highestModule.name}
 										</p>
 									</div>
 								</div>
 							</div>
-
 							<div className="h-[220px] min-w-0 overflow-hidden">
 								<ResponsiveContainer width="100%" height="100%">
 									<AreaChart
@@ -748,13 +669,11 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												<stop offset="100%" stopColor="var(--card)" stopOpacity={0} />
 											</linearGradient>
 										</defs>
-
 										<CartesianGrid
 											stroke="var(--border)"
 											strokeDasharray="0"
 											vertical={false}
 										/>
-
 										<XAxis
 											dataKey="name"
 											axisLine={false}
@@ -773,7 +692,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											}}
 											tickFormatter={(value) => {
 												const text = String(value || "");
-
 												if (text === "Sales Orders") return "Sales";
 												if (text === "Sales Invoice") return "S.Inv";
 												if (text === "Sales Return") return "S.Ret";
@@ -782,13 +700,10 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												if (text === "Purchase Return") return "P.Ret";
 												if (text === "Receipts") return "Receipt";
 												if (text === "Payment") return "Pay.";
-
 												return text.length > 8 ? `${text.slice(0, 8)}...` : text;
 											}}
 										/>
-
 										<YAxis hide />
-
 										<Tooltip
 											cursor={{
 												stroke: "var(--border)",
@@ -796,7 +711,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											}}
 											content={<ModuleAreaTooltip />}
 										/>
-
 										<Area
 											type="monotone"
 											dataKey="value"
@@ -822,7 +736,6 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						</div>
 					)}
 				</CompactWidgetCard>
-
 				<CompactWidgetCard
 					title="Revenue Source Distribution"
 					accent="purchase"
@@ -863,14 +776,13 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												</linearGradient>
 											))}
 										</defs>
-
 										<Pie
 											data={revenueChartData}
 											dataKey="value"
 											nameKey="name"
 											cx="50%"
 											cy="50%"
-												innerRadius={78}
+											innerRadius={78}
 											outerRadius={100}
 											paddingAngle={6}
 											stroke="var(--card)"
@@ -883,27 +795,22 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 												/>
 											))}
 										</Pie>
-
 										<Tooltip content={<CompactTooltip />} />
 									</PieChart>
 								</ResponsiveContainer>
-
 								{/* Center Text */}
-									<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-										<p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+								<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+									<p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
 										Total
 									</p>
-
-										<p className="mt-1 max-w-[145px] whitespace-nowrap text-[15px] font-black leading-tight text-foreground">
+									<p className="mt-1 max-w-[145px] whitespace-nowrap text-[15px] font-black leading-tight text-foreground">
 										{formatMoney(revenueTotal)}
 									</p>
-
-										<p className="mt-1 text-[10px] font-bold text-muted-foreground">
+									<p className="mt-1 text-[10px] font-bold text-muted-foreground">
 										Revenue mix
 									</p>
 								</div>
 							</div>
-
 							{/* Legend */}
 							<div className="space-y-2">
 								{revenueChartData.map((item) => (
@@ -915,23 +822,19 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 											<div className="flex min-w-0 items-center gap-2">
 												<span className="h-3 w-3 shrink-0 rounded-full shadow-sm" style={{ backgroundColor: item.color, }}
 												/>
-
 												<div className="min-w-0">
 													<p className="truncate text-sm font-black text-card-foreground">
 														{item.name}
 													</p>
-
 													<p className="text-xs font-bold text-muted-foreground">
 														{item.percent}% of total
 													</p>
 												</div>
 											</div>
-
 											<p className="shrink-0 text-sm font-black text-foreground">
 												{formatMoney(item.value)}
 											</p>
 										</div>
-
 										<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
 											<div
 												className="h-full rounded-full"
@@ -948,13 +851,11 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 					)}
 				</CompactWidgetCard>
 			</div>
-
 			{/* Ranked Widgets */}
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
 				<CompactWidgetCard title="Top Customers" accent="receivable">
 					<div className="space-y-2">
 						{topCustomers.length === 0 && <EmptyData />}
-
 						{topCustomers.map((item: any, index: number) => (
 							<CompactRankItem
 								key={index}
@@ -967,11 +868,9 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Top Vendors" accent="payable">
 					<div className="space-y-2">
 						{topVendors.length === 0 && <EmptyData />}
-
 						{topVendors.map((item: any, index: number) => (
 							<CompactRankItem
 								key={index}
@@ -984,11 +883,9 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Top Selling" accent="sales">
 					<div className="space-y-2">
 						{topSellingProducts.length === 0 && <EmptyData />}
-
 						{topSellingProducts.map((item: any, index: number) => (
 							<CompactRankItem
 								key={index}
@@ -1003,11 +900,9 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Top Purchasing" accent="purchase">
 					<div className="space-y-2">
 						{topPurchasingProducts.length === 0 && <EmptyData />}
-
 						{topPurchasingProducts.map((item: any, index: number) => (
 							<CompactRankItem
 								key={index}
@@ -1026,12 +921,9 @@ const BookEzDashboardView = ({ analytics }: { analytics: any }) => {
 		</motion.div>
 	);
 };
-
-
 /* ===================================================
    TRANSPORT ANALYTICS VIEW - ADDED ONLY
 =================================================== */
-
 const TransportAnalyticsView = ({
 	analytics,
 	loading,
@@ -1048,14 +940,12 @@ const TransportAnalyticsView = ({
 	const vehicleMaintenance = data?.vehicleMaintenance || {};
 	const driverSettlement = data?.driverSettlement || {};
 	const ewayBill = data?.ewaybill || data?.ewayBill || {};
-
 	const ownedList = vehicles?.ownedList || [];
 	const marketList = vehicles?.marketList || [];
 	const transportOrderList = transportOrder?.list || [];
 	const tripAllocationList = tripAllocation?.list || [];
 	const driverSettlementList = driverSettlement?.list || [];
 	const ewayBillList = ewayBill?.list || [];
-
 	const totalOwned = toNumber(vehicles?.totalOwned);
 	const totalMarket = toNumber(vehicles?.totalMarket);
 	const totalVehicles = totalOwned + totalMarket;
@@ -1065,32 +955,26 @@ const TransportAnalyticsView = ({
 	const totalSettlements = toNumber(driverSettlement?.total);
 	const pendingSettlements = toNumber(driverSettlement?.pending);
 	const totalEwayBills = toNumber(ewayBill?.total);
-
 	const expectedFreight = transportOrderList.reduce(
 		(sum: number, item: any) => sum + toNumber(item?.expectedFreight),
 		0
 	);
-
 	const fleetData = [
 		{ name: "Owned", value: totalOwned },
 		{ name: "Market", value: totalMarket },
 	].filter((item) => item.value > 0);
-
 	const activityData = [
 		{ name: "Orders", value: totalOrders },
 		{ name: "Trips", value: totalTrips },
 		{ name: "Settlements", value: totalSettlements },
 		{ name: "E-Way Bills", value: totalEwayBills },
 	];
-
 	const [maintenanceFilter, setMaintenanceFilter] = useState<"all" | "overdue" | "dueSoon" | "upcoming">("all");
 	const [maintenancePage, setMaintenancePage] = useState(1);
 	const maintenancePageSize = 5;
-
 	const maintenanceVehicleRows = useMemo(() => {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
-
 		const buildDateDetail = (value: any) => {
 			if (!value) return null;
 			const dueDate = new Date(String(value).length === 10 ? `${value}T00:00:00` : value);
@@ -1102,7 +986,6 @@ const TransportAnalyticsView = ({
 			const tone = daysLeft < 0 ? "overdue" : daysLeft <= 30 ? "dueSoon" : "upcoming";
 			return { dateLabel, daysLeft, status, tone };
 		};
-
 		const groupedVehicles = Object.values([...(vehicleMaintenance?.list || [])].reduce((acc: any, vehicle: any) => {
 			const key = String(vehicle?.vehicleNumber || vehicle?.vehicleCode || vehicle?._id || vehicle?.code || "").trim();
 			if (!key) return acc;
@@ -1110,7 +993,6 @@ const TransportAnalyticsView = ({
 			acc[key].push(vehicle);
 			return acc;
 		}, {})) as any[];
-
 		return groupedVehicles.map((records: any[]) => {
 			const sortedRecords = [...records].sort((a: any, b: any) => new Date(b?.modifiedOn || b?.createdOn || 0).getTime() - new Date(a?.modifiedOn || a?.createdOn || 0).getTime());
 			const vehicle = sortedRecords[0] || {};
@@ -1137,7 +1019,6 @@ const TransportAnalyticsView = ({
 			return a.maintenancePriorityDays - b.maintenancePriorityDays;
 		});
 	}, [vehicleMaintenance?.list]);
-
 	const maintenanceCounts = useMemo(() => ({
 		all: maintenanceVehicleRows.length,
 		overdue: maintenanceVehicleRows.filter((item: any) => item.maintenanceCategory === "overdue").length,
@@ -1145,25 +1026,20 @@ const TransportAnalyticsView = ({
 		upcoming: maintenanceVehicleRows.filter((item: any) => item.maintenanceCategory === "upcoming").length,
 		attention: maintenanceVehicleRows.filter((item: any) => item.attention > 0).length,
 	}), [maintenanceVehicleRows]);
-
 	const filteredMaintenanceData = useMemo(() => maintenanceVehicleRows.filter((item: any) => maintenanceFilter === "all" || item.maintenanceCategory === maintenanceFilter), [maintenanceVehicleRows, maintenanceFilter]);
 	const maintenanceTotalPages = Math.max(1, Math.ceil(filteredMaintenanceData.length / maintenancePageSize));
 	const filteredMaintenanceList = useMemo(() => {
 		const start = (maintenancePage - 1) * maintenancePageSize;
 		return filteredMaintenanceData.slice(start, start + maintenancePageSize);
 	}, [filteredMaintenanceData, maintenancePage]);
-
 	useEffect(() => { setMaintenancePage(1); }, [maintenanceFilter]);
 	useEffect(() => { if (maintenancePage > maintenanceTotalPages) setMaintenancePage(maintenanceTotalPages); }, [maintenancePage, maintenanceTotalPages]);
-
 	const renderMaintenanceDate = (detail: any) => {
 		if (!detail) return <span className="text-muted-foreground">-</span>;
 		const toneClass = detail.tone === "overdue" ? "text-danger" : detail.tone === "dueSoon" ? "text-orange-600" : "text-foreground";
 		return <div className="whitespace-nowrap"><p className={`text-xs font-black ${toneClass}`}>{detail.dateLabel}</p>{detail.tone !== "upcoming" && <p className={`mt-0.5 text-[10px] font-bold ${toneClass}`}>{detail.status}</p>}</div>;
 	};
-
 	const hasActivityData = activityData.some((item) => item.value > 0);
-
 	if (loading) {
 		return (
 			<div className="flex min-h-[420px] items-center justify-center">
@@ -1179,11 +1055,9 @@ const TransportAnalyticsView = ({
 			</div>
 		);
 	}
-
 	if (error) {
 		return <p className="mt-10 text-center text-danger">{error}</p>;
 	}
-
 	return (
 		<motion.div
 			key="transport-analytics"
@@ -1211,7 +1085,6 @@ const TransportAnalyticsView = ({
 					chartType="bar"
 					accent="sales"
 				/>
-
 				<CompactKpiCard
 					title="Transport Orders"
 					value={totalOrders > 0 ? formatNumber(totalOrders) : "No data found"}
@@ -1224,7 +1097,6 @@ const TransportAnalyticsView = ({
 					chartType="line"
 					accent="receivable"
 				/>
-
 				<CompactKpiCard
 					title="Trip Allocation"
 					value={totalTrips > 0 ? formatNumber(totalTrips) : "No data found"}
@@ -1237,7 +1109,6 @@ const TransportAnalyticsView = ({
 					chartType="donut"
 					accent="purchase"
 				/>
-
 				<CompactKpiCard
 					title="Driver Settlement"
 					value={totalSettlements > 0 ? formatNumber(totalSettlements) : "No data found"}
@@ -1251,7 +1122,6 @@ const TransportAnalyticsView = ({
 					accent="payable"
 				/>
 			</motion.div>
-
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 				<CompactWidgetCard title="Owned vs Market Vehicles" accent="sales">
 					{fleetData.length === 0 ? (
@@ -1282,7 +1152,6 @@ const TransportAnalyticsView = ({
 									<Tooltip content={<CompactTooltip />} />
 								</PieChart>
 							</ResponsiveContainer>
-
 							<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
 								<p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
 									Vehicles
@@ -1294,7 +1163,6 @@ const TransportAnalyticsView = ({
 						</div>
 					)}
 				</CompactWidgetCard>
-
 				<CompactWidgetCard
 					title="Transport Activity"
 					className="xl:col-span-2"
@@ -1317,7 +1185,6 @@ const TransportAnalyticsView = ({
 					)}
 				</CompactWidgetCard>
 			</div>
-
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 				<CompactWidgetCard title="Vehicle Maintenance" className="xl:col-span-2" accent="sales" right={<span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-black text-primary">{formatNumber(maintenanceCounts.attention)} vehicles need attention</span>}>
 					{maintenanceVehicleRows.length === 0 ? (
@@ -1334,7 +1201,6 @@ const TransportAnalyticsView = ({
 									<button key={item.key} type="button" onClick={() => setMaintenanceFilter(item.key)} className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-black transition ${maintenanceFilter === item.key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{item.label}</button>
 								))}
 							</div>
-
 							{filteredMaintenanceList.length === 0 ? (
 								<EmptyData text="No vehicles found" />
 							) : (
@@ -1367,7 +1233,6 @@ const TransportAnalyticsView = ({
 									</table>
 								</div>
 							)}
-
 							{filteredMaintenanceData.length > maintenancePageSize && (
 								<div className="flex items-center justify-between border-t border-border pt-2">
 									<p className="text-[11px] font-bold text-muted-foreground">{(maintenancePage - 1) * maintenancePageSize + 1}-{Math.min(maintenancePage * maintenancePageSize, filteredMaintenanceData.length)} of {filteredMaintenanceData.length} vehicles</p>
@@ -1381,11 +1246,9 @@ const TransportAnalyticsView = ({
 						</div>
 					)}
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="E-Way Bills" accent="payable">
 					<div className={scrollableCardListClass}>
 						{ewayBillList.length === 0 && <EmptyData text="No E-Way Bills available" />}
-
 						{ewayBillList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.ewayBillNumber || "eway"}-${index}`}
@@ -1399,12 +1262,10 @@ const TransportAnalyticsView = ({
 					</div>
 				</CompactWidgetCard>
 			</div>
-
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
 				<CompactWidgetCard title="Owned Vehicles" accent="sales">
 					<div className={scrollableCardListClass}>
 						{ownedList.length === 0 && <EmptyData text="No owned vehicles available" />}
-
 						{ownedList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.vehicleNumber || "owned"}-${index}`}
@@ -1417,11 +1278,9 @@ const TransportAnalyticsView = ({
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Market Vehicles" accent="purchase">
 					<div className={scrollableCardListClass}>
 						{marketList.length === 0 && <EmptyData text="No market vehicles available" />}
-
 						{marketList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.vehicleNumber || "market"}-${index}`}
@@ -1434,11 +1293,9 @@ const TransportAnalyticsView = ({
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Transport Orders" accent="receivable">
 					<div className={scrollableCardListClass}>
 						{transportOrderList.length === 0 && <EmptyData text="No transport orders available" />}
-
 						{transportOrderList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.voucherNumber || "order"}-${index}`}
@@ -1451,11 +1308,9 @@ const TransportAnalyticsView = ({
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				<CompactWidgetCard title="Trip Allocation" accent="payable">
 					<div className={scrollableCardListClass}>
 						{tripAllocationList.length === 0 && <EmptyData text="No trip allocations available" />}
-
 						{tripAllocationList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.voucher || "trip"}-${index}`}
@@ -1469,12 +1324,10 @@ const TransportAnalyticsView = ({
 					</div>
 				</CompactWidgetCard>
 			</div>
-
 			<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
 				<CompactWidgetCard title="Driver Settlement" accent="sales">
 					<div className={scrollableCardListClass}>
 						{driverSettlementList.length === 0 && <EmptyData text="No driver settlements available" />}
-
 						{driverSettlementList.map((item: any, index: number) => (
 							<CompactRankItem
 								key={`${item?.voucherNumber || "settlement"}-${index}`}
@@ -1487,79 +1340,70 @@ const TransportAnalyticsView = ({
 						))}
 					</div>
 				</CompactWidgetCard>
-
 				{/* <CompactWidgetCard title="Maintenance Summary" accent="purchase">
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
-							<p className="text-2xl font-black text-foreground">
-								{formatNumber(vehicleMaintenance?.totalPuc)}
-							</p>
-							<p className="mt-1 text-xs font-bold text-muted-foreground">PUC</p>
-						</div>
-
-						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
-							<p className="text-2xl font-black text-foreground">
-								{formatNumber(vehicleMaintenance?.totalInsurance)}
-							</p>
-							<p className="mt-1 text-xs font-bold text-muted-foreground">Insurance</p>
-						</div>
-
-						<div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
-							<p className="text-2xl font-black text-foreground">
-								{formatNumber(vehicleMaintenance?.totalFitness)}
-							</p>
-							<p className="mt-1 text-xs font-bold text-muted-foreground">Fitness</p>
-						</div>
-					</div>
-				</CompactWidgetCard> */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+                            <p className="text-2xl font-black text-foreground">
+                                {formatNumber(vehicleMaintenance?.totalPuc)}
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-muted-foreground">PUC</p>
+                        </div>
+                        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+                            <p className="text-2xl font-black text-foreground">
+                                {formatNumber(vehicleMaintenance?.totalInsurance)}
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-muted-foreground">Insurance</p>
+                        </div>
+                        <div className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm">
+                            <p className="text-2xl font-black text-foreground">
+                                {formatNumber(vehicleMaintenance?.totalFitness)}
+                            </p>
+                            <p className="mt-1 text-xs font-bold text-muted-foreground">Fitness</p>
+                        </div>
+                    </div>
+                </CompactWidgetCard> */}
 			</div>
 		</motion.div>
 	);
 };
+/* ===================================================
+   CUSTOM DASHBOARD HELPERS - ADDED ONLY
+=================================================== */
 
 const ProfessionalDashboard = () => {
 	const dispatch = useDispatch();
 	const location = useLocation();
-
 	const [openChat, setOpenChat] = useState(false);
 	const [activeTab, setActiveTab] = useState<TabType>("taxez");
-	const [dashboardSection, setDashboardSection] = useState<"dashboard" | "analytics">("dashboard");
-// @ts-ignore
+	const [dashboardSection, setDashboardSection] = useState<
+		"dashboard" | "analytics" | "custom"
+	>("dashboard");
+	// @ts-ignore
 	const { analytics, bookEzAnalytics, loading, error } = useSelector(
 		(s: any) => s.professionalDashboard
 	);
-
 	const { transportAnalytics, transportLoading, transportError } = useSelector(
 		(s: any) => s.professionalDashboard
 	);
-
 	const permissionState = useMemo(() => {
 		return safeJsonParse(localStorage.getItem("permissions")) || {};
 	}, []);
-
 	const permissions = useMemo(() => {
 		const possiblePermissions = permissionState;
-
 		const parsedPermission = safeJsonParse(possiblePermissions);
-
 		if (parsedPermission && Object.keys(parsedPermission).length > 0) {
 			return parsedPermission;
 		}
-
 		return getSavedPermissions();
 	}, [permissionState]);
-
 	const canShowTaxEz = useMemo(() => {
 		return isTaxEzPermission(permissions);
 	}, [permissions]);
-
 	const canShowBookEz = useMemo(() => {
 		return isBookEzPermission(permissions);
 	}, [permissions]);
-
 	const visibleTabs = useMemo(() => {
 		const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [];
-
 		if (canShowTaxEz && false) {
 			tabs.push({
 				key: "taxez",
@@ -1567,7 +1411,6 @@ const ProfessionalDashboard = () => {
 				icon: <FileText size={16} />,
 			});
 		}
-
 		if (canShowBookEz) {
 			tabs.push({
 				key: "bookez",
@@ -1575,40 +1418,32 @@ const ProfessionalDashboard = () => {
 				icon: <Building2 size={16} />,
 			});
 		}
-
 		return tabs;
 	}, [canShowTaxEz, canShowBookEz]);
-
 	useEffect(() => {
 		dispatch(fetchProfessionalDashboardAnalytics() as any);
 	}, [dispatch, location.key]);
-
 	useEffect(() => {
 		if (dashboardSection === "analytics") {
 			dispatch(fetchTransportDashboardAnalytics() as any);
 		}
 	}, [dashboardSection, dispatch, location.key]);
-
 	useEffect(() => {
 		if (visibleTabs.length > 0) {
 			const exists = visibleTabs.some((tab) => tab.key === activeTab);
-
 			if (!exists) {
 				setActiveTab(visibleTabs[0].key);
 			}
 		}
 	}, [visibleTabs, activeTab]);
-
 	useEffect(() => {
 		if (canShowBookEz && !canShowTaxEz) {
 			setActiveTab("bookez");
 		}
-
 		if (canShowTaxEz && !canShowBookEz) {
 			setActiveTab("taxez");
 		}
 	}, [canShowBookEz, canShowTaxEz]);
-
 	if (loading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-background">
@@ -1624,11 +1459,9 @@ const ProfessionalDashboard = () => {
 			</div>
 		);
 	}
-
 	if (error) {
 		return <p className="mt-10 text-center text-danger">{error}</p>;
 	}
-
 	if (visibleTabs.length === 0 && false) {
 		return (
 			<div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
@@ -1636,7 +1469,6 @@ const ProfessionalDashboard = () => {
 					<h2 className="text-lg font-bold text-card-foreground">
 						No dashboard permission
 					</h2>
-
 					<p className="mt-2 text-sm font-medium text-muted-foreground">
 						TaxEz and BookEz dashboard access is disabled for this user.
 					</p>
@@ -1644,7 +1476,6 @@ const ProfessionalDashboard = () => {
 			</div>
 		);
 	}
-
 	return (
 		<motion.div
 			initial={{ opacity: 0 }}
@@ -1663,7 +1494,6 @@ const ProfessionalDashboard = () => {
 				>
 					BookEZ
 				</button>
-
 				<button
 					type="button"
 					onClick={() => setDashboardSection("analytics")}
@@ -1674,28 +1504,33 @@ const ProfessionalDashboard = () => {
 				>
 					TransportEZ
 				</button>
+				<button
+					type="button"
+					onClick={() => setDashboardSection("custom")}
+					className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition ${dashboardSection === "custom"
+						? "bg-primary text-primary-foreground shadow-sm"
+						: "text-muted-foreground hover:bg-muted hover:text-foreground"
+						}`}
+				>
+					Custom Dashboard
+				</button>
 			</div>
-
 			{dashboardSection === "dashboard" && (
 				<>
 					<AnimatePresence mode="wait">
 						{/* {activeTab === "taxez" && canShowTaxEz && (
-							<TaxEzDashboardView analytics={analytics} />
-						)} */}
-
+                            <TaxEzDashboardView analytics={analytics} />
+                        )} */}
 						{/* {activeTab === "bookez" && canShowBookEz && (
-							<BookEzDashboardView analytics={bookEzAnalytics} />
-						)} */}
-
+                            <BookEzDashboardView analytics={bookEzAnalytics} />
+                        )} */}
 						<BookEzDashboardView analytics={bookEzAnalytics} />
 					</AnimatePresence>
-
 					{activeTab === "taxez" && canShowTaxEz && (
 						<>
 							<div className="fixed bottom-8 right-6 z-50">
 								<AiChatBox onClick={() => setOpenChat(true)} />
 							</div>
-
 							<AiTaxCopilotDrawer
 								open={openChat}
 								onClose={() => setOpenChat(false)}
@@ -1704,7 +1539,6 @@ const ProfessionalDashboard = () => {
 					)}
 				</>
 			)}
-
 			{dashboardSection === "analytics" && (
 				<TransportAnalyticsView
 					analytics={transportAnalytics}
@@ -1712,8 +1546,10 @@ const ProfessionalDashboard = () => {
 					error={transportError}
 				/>
 			)}
+			{dashboardSection === "custom" && (
+				<CustomDashboardView />
+			)}
 		</motion.div>
 	);
 };
-
 export default ProfessionalDashboard;
