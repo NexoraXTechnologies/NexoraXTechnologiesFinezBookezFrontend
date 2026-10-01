@@ -2053,7 +2053,7 @@ const CreateEditTripLREntry = () => {
 
             const resolvedLRTouchUps = resolveLRTouchUps(form.lrTouchUp || []);
             const payload = toTripLRCollectionPayload({ ...form, lrTouchUp: resolvedLRTouchUps }, overrides);
-            console.log("lr_payload",payload)
+            // console.log("lr_payload", payload)
 
             /* ===================================================
                EDIT LR
@@ -2565,7 +2565,7 @@ const CreateEditTripLREntry = () => {
                         icon={<FileText size={18} />}
                     >
                         <div className="w-full md:col-span-2 xl:col-span-4">
-                            <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 md:col-span-2 xl:col-span-4">
                                 {renderFields(basicFields)}
                             </div>
 

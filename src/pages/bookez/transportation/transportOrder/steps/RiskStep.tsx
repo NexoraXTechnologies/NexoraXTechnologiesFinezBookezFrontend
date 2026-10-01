@@ -3,16 +3,52 @@ import { FormSectionCard } from "../../../../../components/SectionCards";
 import { renderField } from "../../../../../components/inputs";
 import { riskOptions } from "../transportOrderOptions";
 
+// ★★★ ADDED: safely handle true/false coming from API as string or boolean
+const toBoolean = (value: any): boolean => {
+    return (
+        value === true ||
+        value === "true" ||
+        value === 1 ||
+        value === "1"
+    );
+};
+
 const RiskStep = ({ form, update,isView }: any) => {
+
     const updateBrokerField = (key: string, value: any) => {
+
+        // ★★★ UPDATED: brokerRequired must always be boolean
+        if (key === "brokerRequired") {
+            update("brokerDetails", key, toBoolean(value));
+            return;
+        }
+
         update("brokerDetails", key, value);
     };
 
     const updateRiskField = (key: string, value: any) => {
+
+        // ★★★ UPDATED: insuranceRequired must always be boolean
+        if (key === "insuranceRequired") {
+            update("riskAndInsurance", key, toBoolean(value));
+            return;
+        }
+
         update("riskAndInsurance", key, value);
     };
 
     const updateTrackingField = (key: string, value: any) => {
+
+        // ★★★ UPDATED: tracking checkbox values must always be boolean
+        if (
+            key === "gpsTrackingRequired" ||
+            key === "podRequired" ||
+            key === "liveTrackingEnabled"
+        ) {
+            update("trackingPreferences", key, toBoolean(value));
+            return;
+        }
+
         update("trackingPreferences", key, value);
     };
 
@@ -64,28 +100,50 @@ const RiskStep = ({ form, update,isView }: any) => {
     };
 
     const fieldForm = {
+
+        // ★★★ UPDATED
         "brokerDetails.brokerRequired":
-            form.brokerDetails?.brokerRequired || false,
+        toBoolean(form.brokerDetails?.brokerRequired),
+
         "brokerDetails.brokerCode":
             form.brokerDetails?.brokerCode || "",
+
         "brokerDetails.brokerName":
             form.brokerDetails?.brokerName || "",
+
         "brokerDetails.brokerCommission":
-            form.brokerDetails?.brokerCommission || "",
+            form.brokerDetails?.brokerCommission ?? "",
 
         "riskAndInsurance.riskType":
             form.riskAndInsurance?.riskType || "",
-        "riskAndInsurance.insuranceRequired":
-            form.riskAndInsurance?.insuranceRequired || false,
-        "riskAndInsurance.insuranceAmount":
-            form.riskAndInsurance?.insuranceAmount || "",
 
+        // ★★★ UPDATED
+        "riskAndInsurance.insuranceRequired":
+            toBoolean(
+                form.riskAndInsurance?.insuranceRequired
+            ),
+
+        "riskAndInsurance.insuranceAmount":
+            form.riskAndInsurance?.insuranceAmount ?? "",
+
+
+        // ★★★ UPDATED
         "trackingPreferences.gpsTrackingRequired":
-            form.trackingPreferences?.gpsTrackingRequired || false,
+            toBoolean(
+                form.trackingPreferences?.gpsTrackingRequired
+            ),
+
+        // ★★★ UPDATED
         "trackingPreferences.podRequired":
-            form.trackingPreferences?.podRequired || false,
+            toBoolean(
+                form.trackingPreferences?.podRequired
+            ),
+
+        // ★★★ UPDATED
         "trackingPreferences.liveTrackingEnabled":
-            form.trackingPreferences?.liveTrackingEnabled || false,
+            toBoolean(
+                form.trackingPreferences?.liveTrackingEnabled
+            ),
     };
 
     const brokerToggleField = [
@@ -147,19 +205,19 @@ const RiskStep = ({ form, update,isView }: any) => {
         //     key: "trackingPreferences.gpsTrackingRequired",
         //     label: "GPS Tracking Required",
         //     type: "checkbox",
-           
         // },
+
         {
             key: "trackingPreferences.podRequired",
             label: "POD Required",
             type: "checkbox",
             // className: "md:col-span-2 xl:col-span-3",
         },
+
         // {
         //     key: "trackingPreferences.liveTrackingEnabled",
         //     label: "Live Tracking Enabled",
         //     type: "checkbox",
-           
         // },
     ];
 
@@ -176,14 +234,20 @@ const RiskStep = ({ form, update,isView }: any) => {
         );
 
     return (
-        <FormSectionCard title="Risk, Broker & Tracking" icon={<ShieldCheck size={18} />}>
+        <FormSectionCard
+            title="Risk, Broker & Tracking"
+            icon={<ShieldCheck size={18} />}
+        >
             {renderFields(brokerToggleField)}
 
-            {form.brokerDetails?.brokerRequired && renderFields(brokerFields)}
+            {/* ★★★ UPDATED */}
+            {toBoolean(form.brokerDetails?.brokerRequired) &&
+                renderFields(brokerFields)}
 
             {renderFields(riskFields)}
 
-            {form.riskAndInsurance?.insuranceRequired &&
+            {/* ★★★ UPDATED */}
+            {toBoolean(form.riskAndInsurance?.insuranceRequired) &&
                 renderFields(insuranceFields)}
 
             {renderFields(trackingFields)}
