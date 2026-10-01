@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { TourProvider } from "./tour/TourContext";
 import ProfessionalDashboardLayout from "./layouts/ProfessionalDashboardLayout";
-import ProfessionalDashboard from "./pages/professional/ProfessionalDashboard";
+import ProfessionalDashboard from "./pages/professional/dashboard";
 import ProfessionalProfile from "./pages/professional/ProfessionalProfile";
 import DocumentMangement from "./pages/professional/DocumentMangement";
 import TaskManagement from "./pages/professional/TaskManagement";
